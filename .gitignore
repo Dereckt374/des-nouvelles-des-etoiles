@@ -1,0 +1,20 @@
+# Secrets
+config/settings.yaml
+.env
+
+# Data (articles DB et mémoire — à versionner ou non selon préférence)
+data/articles.db
+data/last_digest.html
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

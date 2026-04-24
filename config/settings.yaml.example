@@ -1,0 +1,24 @@
+# Copier ce fichier en settings.yaml et remplir les valeurs
+# Ne jamais commiter settings.yaml (il est dans .gitignore)
+
+ollama:
+  base_url: "http://localhost:11434"  # URL de ton instance Ollama
+  model: "mistral"                    # Modèle local à utiliser
+  # Autres bons choix : qwen2.5:7b (très bon français), llama3.2:3b (plus léger)
+
+email:
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "votre.adresse@gmail.com"      # Ton adresse Gmail
+  smtp_password: "xxxx xxxx xxxx xxxx"      # Mot de passe d'application Gmail (16 caractères)
+  sender_address: "votre.adresse@gmail.com"
+  sender_name: "Des nouvelles des étoiles"
+  recipient: "votre.adresse@gmail.com"      # Peut être la même adresse
+
+digest:
+  # Nombre max d'articles à traiter par exécution (évite les coûts excessifs)
+  max_articles: 40
+  # Nombre de jours en arrière pour considérer un article comme "récent"
+  lookback_days: 2
+  # Langue de la synthèse générée
+  language: "fr"
