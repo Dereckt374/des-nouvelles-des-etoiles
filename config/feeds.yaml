@@ -46,14 +46,6 @@ feeds:
     name: JPL News
     lang: en
 
-  - url: http://sci.esa.int/newssyndication/rss/sciweb.xml
-    name: ESA Science
-    lang: en
-
-  - url: http://sci.esa.int/newssyndication/rss/cosmicvisionweb.xml
-    name: ESA Cosmic Vision
-    lang: en
-
   # Défense & tech (contexte)
   - url: https://feeds.feedburner.com/ZoneMilitaire
     name: Zone Militaire
