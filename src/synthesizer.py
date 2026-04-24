@@ -76,17 +76,33 @@ def _format_articles(articles: list[dict]) -> str:
 
 
 def _extract_json(raw: str) -> dict:
+    """Extracts JSON from model output, tolerating markdown fences and leading text."""
+    # Remove markdown fences
+    cleaned = re.sub(r"```(?:json)?", "", raw).strip()
+
+    # Try direct parse
     try:
-        return json.loads(raw)
+        return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
-    m = re.search(r"\{[\s\S]+\}", raw)
-    if m:
-        try:
-            return json.loads(m.group(0))
-        except json.JSONDecodeError:
-            pass
-    raise ValueError(f"Could not parse JSON from model output: {raw[:400]}")
+
+    # Find the outermost { ... } block
+    start = cleaned.find("{")
+    if start != -1:
+        # Walk backwards from the end to find matching closing brace
+        depth = 0
+        for i, ch in enumerate(cleaned[start:], start):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(cleaned[start : i + 1])
+                    except json.JSONDecodeError:
+                        break
+
+    raise ValueError(f"Could not parse JSON from model output:\n{raw[:600]}")
 
 
 def synthesize(
@@ -100,7 +116,7 @@ def synthesize(
     if not articles:
         log.warning("No articles to synthesize")
         return DigestResult(
-            html_body="<p>Aucun article récent trouvé aujourd'hui.</p>",
+            html_body=_render_empty(),
             plain_body="Aucun article récent trouvé aujourd'hui.",
         )
 
@@ -128,7 +144,7 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
 {JSON_SCHEMA}
 """
 
-    log.info("Calling Mistral API (model: %s) ...", model)
+    log.info("Calling Mistral API (model: %s, articles: %d) ...", model, len(articles))
 
     response = client.chat.complete(
         model=model,
@@ -143,12 +159,17 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
 
     raw = response.choices[0].message.content.strip()
     log.info("Mistral response received (%d chars)", len(raw))
+    log.debug("Raw response: %s", raw[:300])
 
     try:
         data = _extract_json(raw)
     except ValueError as e:
         log.error("JSON parse failed: %s", e)
-        return DigestResult(html_body=f"<pre>{raw}</pre>", plain_body=raw)
+        # Send the raw text rather than silent failure
+        return DigestResult(
+            html_body=_render_error(raw, today),
+            plain_body=raw,
+        )
 
     return DigestResult(
         html_body=_render_html(data, today),
@@ -158,47 +179,160 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
     )
 
 
+# ---------------------------------------------------------------------------
+# Email rendering — all styles are inline for maximum email client compat
+# ---------------------------------------------------------------------------
+
+# Palette
+_C_BG       = "#f4f6fb"
+_C_CARD     = "#ffffff"
+_C_HEADER   = "#0b1f3a"
+_C_ACCENT   = "#d94f3d"
+_C_SECTION  = "#1a3a5c"
+_C_TEXT     = "#2c2c2c"
+_C_MUTED    = "#6b7280"
+_C_BORDER   = "#e2e8f0"
+_C_HLBG     = "#fff7ed"
+_C_HLBORDER = "#f59e0b"
+
+
+def _td(content: str, style: str = "") -> str:
+    return f'<td style="{style}">{content}</td>'
+
+
 def _render_html(data: dict, today: str) -> str:
-    parts = [f"""<!DOCTYPE html>
+    sections_html = _sections_block(data.get("sections", []))
+    points_html   = _points_block(data.get("points_marquants", []))
+
+    return f"""<!DOCTYPE html>
 <html lang="fr">
-<head>
-<meta charset="utf-8">
-<style>
-  body {{ font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1a1a2e; line-height: 1.6; }}
-  h1 {{ color: #0f3460; border-bottom: 2px solid #e94560; padding-bottom: 8px; }}
-  h2 {{ color: #0f3460; margin-top: 32px; }}
-  .highlights {{ background: #f0f4ff; border-left: 4px solid #e94560; padding: 16px 20px; border-radius: 4px; }}
-  .highlights li {{ margin-bottom: 6px; }}
-  .article {{ margin-bottom: 14px; }}
-  .article a {{ color: #e94560; text-decoration: none; font-weight: bold; }}
-  .article .source {{ font-size: 0.85em; color: #666; }}
-  footer {{ margin-top: 40px; font-size: 0.8em; color: #999; border-top: 1px solid #eee; padding-top: 12px; }}
-</style>
-</head>
-<body>
-<h1>Des nouvelles des étoiles</h1>
-<p><em>{today}</em></p>
-"""]
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:{_C_BG};font-family:Georgia,serif;">
 
-    points = data.get("points_marquants", [])
-    if points:
-        items = "".join(f"<li>{p}</li>" for p in points)
-        parts.append(f'<div class="highlights"><strong>Points marquants</strong><ul>{items}</ul></div>')
+<table width="100%" cellpadding="0" cellspacing="0" style="background:{_C_BG};padding:32px 0;">
+<tr><td align="center">
+<table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;">
 
-    for section in data.get("sections", []):
-        parts.append(f'<h2>{section["titre"]}</h2>')
-        for art in section.get("articles", []):
-            parts.append(
-                f'<div class="article">'
-                f'<a href="{art.get("url", "#")}">{art["titre"]}</a> '
-                f'<span class="source">({art["source"]})</span><br>'
-                f'{art["resume"]}'
-                f'</div>'
-            )
+  <!-- HEADER -->
+  <tr>
+    <td style="background:{_C_HEADER};border-radius:12px 12px 0 0;padding:32px 40px 24px;">
+      <p style="margin:0 0 4px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#7fa8d0;">
+        Veille quotidienne
+      </p>
+      <h1 style="margin:0;font-size:26px;font-weight:bold;color:#ffffff;line-height:1.2;">
+        Des nouvelles des étoiles
+      </h1>
+      <p style="margin:10px 0 0;font-size:14px;color:#94b4cc;">{today}</p>
+    </td>
+  </tr>
 
-    parts.append("<footer>Digest généré automatiquement · Des nouvelles des étoiles</footer>")
-    parts.append("</body></html>")
-    return "\n".join(parts)
+  <!-- BODY CARD -->
+  <tr>
+    <td style="background:{_C_CARD};padding:32px 40px;border-left:1px solid {_C_BORDER};border-right:1px solid {_C_BORDER};">
+      {points_html}
+      {sections_html}
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#e8edf5;border-radius:0 0 12px 12px;padding:16px 40px;border:1px solid {_C_BORDER};border-top:none;">
+      <p style="margin:0;font-size:11px;color:{_C_MUTED};text-align:center;">
+        Digest généré automatiquement · Des nouvelles des étoiles
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>"""
+
+
+def _points_block(points: list[str]) -> str:
+    if not points:
+        return ""
+    items = "".join(
+        f'<tr><td style="padding:5px 0 5px 12px;border-left:3px solid {_C_HLBORDER};'
+        f'font-size:14px;color:{_C_TEXT};line-height:1.5;">{p}</td></tr>'
+        for p in points
+    )
+    return f"""
+<table width="100%" cellpadding="0" cellspacing="0"
+       style="background:{_C_HLBG};border-radius:8px;padding:20px 24px;margin-bottom:28px;">
+  <tr>
+    <td>
+      <p style="margin:0 0 12px;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+                color:{_C_ACCENT};font-family:Arial,sans-serif;font-weight:bold;">
+        Points marquants
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="4">{items}</table>
+    </td>
+  </tr>
+</table>"""
+
+
+def _sections_block(sections: list[dict]) -> str:
+    if not sections:
+        return ""
+    html_parts = []
+    for section in sections:
+        articles_html = "".join(_article_row(a) for a in section.get("articles", []))
+        html_parts.append(f"""
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+  <tr>
+    <td style="padding-bottom:10px;border-bottom:2px solid {_C_SECTION};">
+      <h2 style="margin:0;font-size:15px;font-weight:bold;color:{_C_SECTION};
+                 font-family:Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;">
+        {section['titre']}
+      </h2>
+    </td>
+  </tr>
+  <tr><td style="padding-top:14px;">{articles_html}</td></tr>
+</table>""")
+    return "\n".join(html_parts)
+
+
+def _article_row(art: dict) -> str:
+    url    = art.get("url", "#")
+    titre  = art.get("titre", "")
+    source = art.get("source", "")
+    resume = art.get("resume", "")
+    return f"""
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+  <tr>
+    <td style="padding-left:12px;border-left:3px solid {_C_BORDER};">
+      <a href="{url}" style="font-size:14px;font-weight:bold;color:{_C_ACCENT};
+                             text-decoration:none;line-height:1.4;">{titre}</a>
+      <span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;
+                   margin-left:6px;">— {source}</span>
+      <p style="margin:4px 0 0;font-size:13px;color:{_C_TEXT};line-height:1.5;">{resume}</p>
+    </td>
+  </tr>
+</table>"""
+
+
+def _render_error(raw: str, today: str) -> str:
+    """Fallback email when JSON parsing fails — shows raw output."""
+    return f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:620px;margin:40px auto;color:#333;">
+  <h2 style="color:#c0392b;">Digest du {today} — erreur de rendu</h2>
+  <p>Le modèle a répondu mais la structure JSON n'a pas pu être analysée.</p>
+  <pre style="background:#f8f8f8;padding:16px;border-radius:6px;
+              font-size:12px;overflow-x:auto;white-space:pre-wrap;">{raw}</pre>
+</body></html>"""
+
+
+def _render_empty() -> str:
+    return """<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body style="font-family:Georgia,serif;max-width:620px;margin:40px auto;color:#555;text-align:center;">
+  <h2>Des nouvelles des étoiles</h2>
+  <p>Aucun nouvel article trouvé aujourd'hui.</p>
+</body></html>"""
 
 
 def _render_plain(data: dict, today: str) -> str:
