@@ -154,12 +154,16 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=2000,
+        max_tokens=4000,
     )
 
     raw = response.choices[0].message.content.strip()
     log.info("Mistral response received (%d chars)", len(raw))
-    log.debug("Raw response: %s", raw[:300])
+
+    # Dump raw response for debugging — remove once stable
+    from pathlib import Path
+    Path(__file__).parent.parent.joinpath("data", "last_raw_response.txt").write_text(raw, encoding="utf-8")
+    log.info("Raw response saved to data/last_raw_response.txt")
 
     try:
         data = _extract_json(raw)
