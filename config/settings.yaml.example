@@ -1,10 +1,9 @@
 # Copier ce fichier en settings.yaml et remplir les valeurs
 # Ne jamais commiter settings.yaml (il est dans .gitignore)
 
-ollama:
-  base_url: "http://localhost:11434"  # URL de ton instance Ollama
-  model: "mistral"                    # Modèle local à utiliser
-  # Autres bons choix : qwen2.5:7b (très bon français), llama3.2:3b (plus léger)
+mistral:
+  api_key: "votre_cle_api_mistral"     # console.mistral.ai → API Keys
+  model: "mistral-small-latest"        # Gratuit sur le free tier
 
 email:
   smtp_host: "smtp.gmail.com"
@@ -17,7 +16,7 @@ email:
 
 digest:
   # Nombre max d'articles à traiter par exécution (évite les coûts excessifs)
-  max_articles: 40
+  max_articles: 20
   # Nombre de jours en arrière pour considérer un article comme "récent"
   lookback_days: 2
   # Langue de la synthèse générée

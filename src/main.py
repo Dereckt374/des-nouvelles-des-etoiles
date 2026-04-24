@@ -67,13 +67,13 @@ def run(dry_run: bool = False) -> None:
     # --- 3. Synthesize ---
     from synthesizer import synthesize
 
-    ollama_cfg = settings.get("ollama", {})
+    mistral_cfg = settings.get("mistral", {})
     result = synthesize(
         articles=articles,
         memory_content=memory_content,
         reminders=reminders,
-        model=ollama_cfg.get("model", "mistral"),
-        ollama_url=ollama_cfg.get("base_url", "http://localhost:11434"),
+        model=mistral_cfg.get("model", "mistral-small-latest"),
+        api_key=mistral_cfg["api_key"],
     )
 
     # --- 4. Update memory ---

@@ -1,5 +1,5 @@
 """
-Synthesizes fetched articles into a daily digest using a local Ollama model.
+Synthesizes fetched articles into a daily digest using the Mistral API.
 
 Returns a DigestResult with:
   - html_body: full HTML for the email
@@ -11,13 +11,12 @@ Returns a DigestResult with:
 import json
 import logging
 import re
-import requests
 from dataclasses import dataclass, field
 from datetime import date
 
-log = logging.getLogger(__name__)
+from mistralai import Mistral
 
-OLLAMA_DEFAULT_URL = "http://localhost:11434"
+log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 Tu es un assistant expert en actualité spatiale et technologique. \
@@ -76,46 +75,17 @@ def _format_articles(articles: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _call_ollama(prompt: str, model: str, base_url: str) -> str:
-    """Calls Ollama /api/generate with JSON format enforced."""
-    url = f"{base_url.rstrip('/')}/api/generate"
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json",        # Ollama native JSON mode
-        "options": {
-            "temperature": 0.3,  # Low temp for structured output
-            "num_predict": 3000,
-        },
-    }
-    try:
-        resp = requests.post(url, json=payload, timeout=300)
-        resp.raise_for_status()
-        return resp.json()["response"]
-    except requests.exceptions.ConnectionError:
-        raise RuntimeError(
-            f"Ollama not reachable at {base_url}. "
-            "Is Ollama running? Try: ollama serve"
-        )
-
-
 def _extract_json(raw: str) -> dict:
-    """Extracts and parses JSON from model output, tolerating minor noise."""
-    # Try direct parse first
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
         pass
-
-    # Try extracting the first {...} block
     m = re.search(r"\{[\s\S]+\}", raw)
     if m:
         try:
             return json.loads(m.group(0))
         except json.JSONDecodeError:
             pass
-
     raise ValueError(f"Could not parse JSON from model output: {raw[:400]}")
 
 
@@ -124,8 +94,8 @@ def synthesize(
     memory_content: str,
     reminders: list[str],
     model: str,
-    ollama_url: str = OLLAMA_DEFAULT_URL,
-    **_kwargs,  # absorb unused keys (api_key, etc.) from settings
+    api_key: str,
+    **_kwargs,
 ) -> DigestResult:
     if not articles:
         log.warning("No articles to synthesize")
@@ -134,6 +104,7 @@ def synthesize(
             plain_body="Aucun article récent trouvé aujourd'hui.",
         )
 
+    client = Mistral(api_key=api_key)
     today = date.today().strftime("%A %d %B %Y")
     articles_text = _format_articles(articles)
 
@@ -142,9 +113,7 @@ def synthesize(
         items = "\n".join(f"- {r}" for r in reminders)
         reminders_block = f"\n\nRAPPELS DU JOUR:\n{items}"
 
-    # Single-shot prompt — smaller models work best with one clear prompt
-    prompt = f"""{SYSTEM_PROMPT}
-
+    user_message = f"""\
 MÉMOIRE PERSISTANTE:
 {memory_content}
 
@@ -159,9 +128,21 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
 {JSON_SCHEMA}
 """
 
-    log.info("Calling Ollama model '%s' at %s ...", model, ollama_url)
-    raw = _call_ollama(prompt, model=model, base_url=ollama_url)
-    log.info("Ollama response received (%d chars)", len(raw))
+    log.info("Calling Mistral API (model: %s) ...", model)
+
+    response = client.chat.complete(
+        model=model,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=2000,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    log.info("Mistral response received (%d chars)", len(raw))
 
     try:
         data = _extract_json(raw)
@@ -215,7 +196,7 @@ def _render_html(data: dict, today: str) -> str:
                 f'</div>'
             )
 
-    parts.append("<footer>Digest généré localement · Des nouvelles des étoiles</footer>")
+    parts.append("<footer>Digest généré automatiquement · Des nouvelles des étoiles</footer>")
     parts.append("</body></html>")
     return "\n".join(parts)
 
