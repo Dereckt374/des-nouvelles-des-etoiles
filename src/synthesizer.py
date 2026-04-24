@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from mistralai import Mistral
+from mistralai.client import Mistral
 
 log = logging.getLogger(__name__)
 

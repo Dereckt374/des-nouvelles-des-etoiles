@@ -8,7 +8,5 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="$REPO_DIR/.venv"
 
 # Activate virtual environment
-source "$VENV/bin/activate"
-
 cd "$REPO_DIR/src"
-python main.py
+"$VENV/bin/python" main.py
