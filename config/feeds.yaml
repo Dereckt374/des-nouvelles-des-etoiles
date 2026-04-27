@@ -1,5 +1,4 @@
 feeds:
-  # Presse française généraliste (espace)
   - url: https://www.lesnumeriques.com/science-espace/rss.xml
     name: Les Numériques — Science & Espace
     lang: fr
@@ -16,7 +15,6 @@ feeds:
     name: The Conversation FR — Technologie
     lang: fr
 
-  # Presse spatiale internationale
   - url: https://spacenews.com/feed/
     name: SpaceNews
     lang: en
@@ -33,7 +31,6 @@ feeds:
     name: Jatan's Space
     lang: en
 
-  # Agences spatiales
   - url: https://www.nasa.gov/news-release/feed/
     name: NASA — News Releases
     lang: en
@@ -46,7 +43,6 @@ feeds:
     name: JPL News
     lang: en
 
-  # Défense & tech (contexte)
   - url: https://feeds.feedburner.com/ZoneMilitaire
     name: Zone Militaire
     lang: fr
@@ -54,3 +50,19 @@ feeds:
   - url: https://www.frenchweb.fr/feed
     name: FrenchWeb
     lang: fr
+
+  - url: https://www.space.com/feeds.xml
+    name: Space.com
+    lang: en
+
+  - url: http://spacenews.com/feed/
+    name: SpaceNews
+    lang: en
+
+  - url: https://spaceflightnow.com/feed/
+    name: SpaceFlight Now
+    lang: en
+
+  - url: https://www.esa.int/rssfeed/TopNews
+    name: ESA — Top News
+    lang: en
