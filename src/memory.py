@@ -12,14 +12,18 @@ The synthesizer reads this file as context and may propose updates.
 This module applies those updates.
 """
 
+import json
 import re
 import logging
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
 MEMORY_PATH = Path(__file__).parent.parent / "data" / "memory.md"
+HIGHLIGHTS_PATH = Path(__file__).parent.parent / "data" / "highlights_history.json"
+
+_HIGHLIGHTS_RETENTION_DAYS = 14
 
 TEMPLATE = """\
 # Mémoire — Des nouvelles des étoiles
@@ -88,3 +92,38 @@ def apply_memory_update(new_dated: list[str], new_permanent: list[str]) -> None:
         len(new_dated),
         len(new_permanent),
     )
+
+
+def get_recent_highlights(days: int = 7) -> list[dict]:
+    """Returns highlights from the last `days` days, oldest first."""
+    if not HIGHLIGHTS_PATH.exists():
+        return []
+    try:
+        history = json.loads(HIGHLIGHTS_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    return [entry for entry in history if entry.get("date", "") >= cutoff]
+
+
+def save_highlights(points: list[str]) -> None:
+    """Appends today's highlights and prunes entries older than retention window."""
+    today = date.today().isoformat()
+    if HIGHLIGHTS_PATH.exists():
+        try:
+            history = json.loads(HIGHLIGHTS_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            history = []
+    else:
+        history = []
+
+    # Remove any existing entry for today (idempotent re-runs)
+    history = [e for e in history if e.get("date") != today]
+    history.append({"date": today, "highlights": points})
+
+    # Prune old entries
+    cutoff = (date.today() - timedelta(days=_HIGHLIGHTS_RETENTION_DAYS)).isoformat()
+    history = [e for e in history if e.get("date", "") >= cutoff]
+
+    HIGHLIGHTS_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    log.info("Saved %d highlights for %s", len(points), today)
