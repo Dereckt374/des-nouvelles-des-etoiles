@@ -51,7 +51,7 @@ Règles de rédaction :
 - Sois synthétique et précis : une info = une phrase claire + source.
 - Réponds UNIQUEMENT avec du JSON valide, sans texte avant ni après, sans balises markdown."""
 
-ARTICLE_TEMPLATE = "- [{title}] ({feed}) : {summary}"
+ARTICLE_TEMPLATE = "- [{title}] ({feed}, {date}) : {summary}"
 
 JSON_SCHEMA = """\
 {
@@ -60,7 +60,7 @@ JSON_SCHEMA = """\
     {
       "titre": "Titre de section",
       "articles": [
-        {"titre": "...", "url": "...", "source": "...", "resume": "..."}
+        {"titre": "...", "url": "...", "source": "...", "date": "YYYY-MM-DD", "resume": "..."}
       ]
     }
   ],
@@ -82,10 +82,13 @@ def _format_articles(articles: list[dict]) -> str:
     lines = []
     for a in articles:
         summary = a["summary"][:250] if a["summary"] else "(pas de résumé)"
+        pub = a.get("published", "")
+        date_str = pub[:10] if pub else "date inconnue"
         lines.append(
             ARTICLE_TEMPLATE.format(
                 title=a["title"],
                 feed=a["feed_name"],
+                date=date_str,
                 summary=summary,
             )
         )
@@ -199,8 +202,8 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
         )
 
     return DigestResult(
-        html_body=_render_html(data, today),
-        plain_body=_render_plain(data, today),
+        html_body=_render_html(data, today, article_count=len(articles)),
+        plain_body=_render_plain(data, today, article_count=len(articles)),
         new_dated_memories=data.get("nouvelles_memoires_datees", []),
         new_permanent_memories=data.get("nouvelles_memoires_permanentes", []),
         new_highlights=data.get("points_marquants", []),
@@ -228,7 +231,7 @@ def _td(content: str, style: str = "") -> str:
     return f'<td style="{style}">{content}</td>'
 
 
-def _render_html(data: dict, today: str) -> str:
+def _render_html(data: dict, today: str, article_count: int = 0) -> str:
     sections_html = _sections_block(data.get("sections", []))
     points_html   = _points_block(data.get("points_marquants", []))
 
@@ -250,7 +253,12 @@ def _render_html(data: dict, today: str) -> str:
       <h1 style="margin:0;font-size:26px;font-weight:bold;color:#ffffff;line-height:1.2;">
         Des nouvelles des étoiles
       </h1>
-      <p style="margin:10px 0 0;font-size:14px;color:#94b4cc;">{today}</p>
+      <p style="margin:10px 0 0;font-size:14px;color:#94b4cc;">
+        {today}
+        <span style="margin-left:14px;font-size:12px;color:#7fa8d0;font-family:Arial,sans-serif;">
+          ·&nbsp;{article_count}&nbsp;nouvel{'s' if article_count > 1 else ''}&nbsp;article{'s' if article_count > 1 else ''}
+        </span>
+      </p>
     </td>
   </tr>
 
@@ -328,6 +336,11 @@ def _article_row(art: dict) -> str:
     titre  = art.get("titre", "")
     source = art.get("source", "")
     resume = art.get("resume", "")
+    date   = art.get("date", "")
+    meta_parts = [f"— {source}"] if source else []
+    if date:
+        meta_parts.append(date)
+    meta = " · ".join(meta_parts) if meta_parts else ""
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
   <tr>
@@ -335,7 +348,7 @@ def _article_row(art: dict) -> str:
       <a href="{url}" style="font-size:14px;font-weight:bold;color:{_C_ACCENT};
                              text-decoration:none;line-height:1.4;">{titre}</a>
       <span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;
-                   margin-left:6px;">— {source}</span>
+                   margin-left:6px;">{meta}</span>
       <p style="margin:4px 0 0;font-size:13px;color:{_C_TEXT};line-height:1.5;">{resume}</p>
     </td>
   </tr>
@@ -363,8 +376,9 @@ def _render_empty() -> str:
 </body></html>"""
 
 
-def _render_plain(data: dict, today: str) -> str:
-    lines = [f"Des nouvelles des étoiles — {today}", "=" * 50, ""]
+def _render_plain(data: dict, today: str, article_count: int = 0) -> str:
+    suffix = f" · {article_count} nouvel{'s' if article_count > 1 else ''} article{'s' if article_count > 1 else ''}" if article_count else ""
+    lines = [f"Des nouvelles des étoiles — {today}{suffix}", "=" * 50, ""]
 
     points = data.get("points_marquants", [])
     if points:
@@ -377,7 +391,9 @@ def _render_plain(data: dict, today: str) -> str:
         lines.append(section["titre"].upper())
         lines.append("-" * len(section["titre"]))
         for art in section.get("articles", []):
-            lines.append(f'  [{art["source"]}] {art["titre"]}')
+            date = art.get("date", "")
+            date_str = f" · {date}" if date else ""
+            lines.append(f'  [{art["source"]}]{date_str} {art["titre"]}')
             lines.append(f'  {art["resume"]}')
             lines.append(f'  {art.get("url", "")}')
             lines.append("")
