@@ -46,12 +46,11 @@ Règles de rédaction :
 - Si un article apporte un fait de contexte durable (nouveau lanceur confirmé, \
   résultat de tir, contrat majeur), note-le en mémoire permanente.
 - Ne répète pas les faits déjà présents dans la mémoire.
-- Ne répète pas les points marquants des jours précédents (listés sous POINTS MARQUANTS RÉCENTS). \
-  Mets en avant de nouveaux faits, même si le sujet est similaire.
 - Sois synthétique et précis : une info = une phrase claire + source.
+- Pour le champ "url" de chaque article, recopie EXACTEMENT l'URL fournie entre parenthèses dans la liste — ne la modifie pas, ne la reconstruis pas.
 - Réponds UNIQUEMENT avec du JSON valide, sans texte avant ni après, sans balises markdown."""
 
-ARTICLE_TEMPLATE = "- [{title}] ({feed}, {date}) : {summary}"
+ARTICLE_TEMPLATE = "- [{title}]({url}) ({feed}, {date}) : {summary}"
 
 JSON_SCHEMA = """\
 {
@@ -75,7 +74,6 @@ class DigestResult:
     plain_body: str
     new_dated_memories: list[str] = field(default_factory=list)
     new_permanent_memories: list[str] = field(default_factory=list)
-    new_highlights: list[str] = field(default_factory=list)
 
 
 def _format_articles(articles: list[dict]) -> str:
@@ -87,6 +85,7 @@ def _format_articles(articles: list[dict]) -> str:
         lines.append(
             ARTICLE_TEMPLATE.format(
                 title=a["title"],
+                url=a.get("url", ""),
                 feed=a["feed_name"],
                 date=date_str,
                 summary=summary,
@@ -131,7 +130,6 @@ def synthesize(
     reminders: list[str],
     model: str,
     api_key: str,
-    recent_highlights: list[dict] | None = None,
     **_kwargs,
 ) -> DigestResult:
     if not articles:
@@ -150,15 +148,6 @@ def synthesize(
         items = "\n".join(f"- {r}" for r in reminders)
         reminders_block = f"\n\nRAPPELS DU JOUR:\n{items}"
 
-    recent_highlights_block = ""
-    if recent_highlights:
-        lines = []
-        for entry in recent_highlights:
-            lines.append(f"  {entry['date']}:")
-            for h in entry.get("highlights", []):
-                lines.append(f"    • {h}")
-        recent_highlights_block = "\n\nPOINTS MARQUANTS RÉCENTS (à ne pas répéter):\n" + "\n".join(lines)
-
     user_message = f"""\
 MÉMOIRE PERSISTANTE:
 {memory_content}
@@ -167,7 +156,7 @@ MÉMOIRE PERSISTANTE:
 DATE: {today}
 ARTICLES ({len(articles)}):
 {articles_text}
-{reminders_block}{recent_highlights_block}
+{reminders_block}
 
 ---
 Génère le digest en respectant EXACTEMENT ce schéma JSON:
@@ -206,7 +195,6 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
         plain_body=_render_plain(data, today, article_count=len(articles)),
         new_dated_memories=data.get("nouvelles_memoires_datees", []),
         new_permanent_memories=data.get("nouvelles_memoires_permanentes", []),
-        new_highlights=data.get("points_marquants", []),
     )
 
 

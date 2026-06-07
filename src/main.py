@@ -57,15 +57,12 @@ def run(dry_run: bool = False) -> None:
         return
 
     # --- 2. Load memory ---
-    from memory import read_memory, get_todays_reminders, get_recent_highlights
+    from memory import read_memory, get_todays_reminders
 
     memory_content = read_memory()
     reminders = get_todays_reminders()
     if reminders:
         log.info("Today's reminders: %s", reminders)
-    recent_highlights = get_recent_highlights(days=7)
-    if recent_highlights:
-        log.info("Loaded %d days of recent highlights", len(recent_highlights))
 
     # --- 3. Synthesize ---
     from synthesizer import synthesize
@@ -75,15 +72,13 @@ def run(dry_run: bool = False) -> None:
         articles=articles,
         memory_content=memory_content,
         reminders=reminders,
-        recent_highlights=recent_highlights,
         model=mistral_cfg.get("model", "mistral-small-latest"),
         api_key=mistral_cfg["api_key"],
     )
 
     # --- 4. Update memory ---
-    from memory import apply_memory_update, save_highlights
+    from memory import apply_memory_update
 
-    save_highlights(result.new_highlights)
     apply_memory_update(
         new_dated=result.new_dated_memories,
         new_permanent=result.new_permanent_memories,
