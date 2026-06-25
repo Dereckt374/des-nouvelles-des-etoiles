@@ -4,14 +4,12 @@ Synthesizes fetched articles into a daily digest using the Mistral API.
 Returns a DigestResult with:
   - html_body: full HTML for the email
   - plain_body: plain-text fallback
-  - new_dated_memories: list of new dated entries to save
-  - new_permanent_memories: list of new permanent facts to save
 """
 
 import json
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 
 from mistralai.client import Mistral
@@ -20,8 +18,7 @@ log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 Tu es un assistant expert en actualité spatiale, destiné à un opérateur de fusée professionnel. \
-Tu reçois chaque matin une liste d'articles récents issus de flux RSS \
-ainsi qu'une mémoire persistante des événements et contextes importants. \
+Tu reçois chaque matin une liste d'articles récents issus de flux RSS. \
 Ta mission : produire un digest quotidien en français, clair, structuré \
 et informatif, destiné à être envoyé par email.
 
@@ -42,10 +39,6 @@ Règles de rédaction :
 - Rédige en français, même pour les articles anglophones.
 - Structure les sections dans l'ordre de priorité ci-dessus.
 - Les points marquants doivent refléter cette hiérarchie : prioriser les news lanceurs.
-- Si un article concerne un événement à venir (lancement, annonce), note-le dans les mémoires datées.
-- Si un article apporte un fait de contexte durable (nouveau lanceur confirmé, \
-  résultat de tir, contrat majeur), note-le en mémoire permanente.
-- Ne répète pas les faits déjà présents dans la mémoire.
 - Sois synthétique et précis : une info = une phrase claire + source.
 - Pour le champ "url" de chaque article, recopie EXACTEMENT l'URL fournie entre parenthèses dans la liste — ne la modifie pas, ne la reconstruis pas.
 - Réponds UNIQUEMENT avec du JSON valide, sans texte avant ni après, sans balises markdown."""
@@ -62,9 +55,7 @@ JSON_SCHEMA = """\
         {"titre": "...", "url": "...", "source": "...", "date": "YYYY-MM-DD", "resume": "..."}
       ]
     }
-  ],
-  "nouvelles_memoires_datees": ["- YYYY-MM-DD | Titre | Description"],
-  "nouvelles_memoires_permanentes": ["- Fait de fond court"]
+  ]
 }"""
 
 
@@ -72,8 +63,6 @@ JSON_SCHEMA = """\
 class DigestResult:
     html_body: str
     plain_body: str
-    new_dated_memories: list[str] = field(default_factory=list)
-    new_permanent_memories: list[str] = field(default_factory=list)
 
 
 def _format_articles(articles: list[dict]) -> str:
@@ -126,8 +115,6 @@ def _extract_json(raw: str) -> dict:
 
 def synthesize(
     articles: list[dict],
-    memory_content: str,
-    reminders: list[str],
     model: str,
     api_key: str,
     **_kwargs,
@@ -143,20 +130,10 @@ def synthesize(
     today = date.today().strftime("%A %d %B %Y")
     articles_text = _format_articles(articles)
 
-    reminders_block = ""
-    if reminders:
-        items = "\n".join(f"- {r}" for r in reminders)
-        reminders_block = f"\n\nRAPPELS DU JOUR:\n{items}"
-
     user_message = f"""\
-MÉMOIRE PERSISTANTE:
-{memory_content}
-
----
 DATE: {today}
 ARTICLES ({len(articles)}):
 {articles_text}
-{reminders_block}
 
 ---
 Génère le digest en respectant EXACTEMENT ce schéma JSON:
@@ -193,8 +170,6 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
     return DigestResult(
         html_body=_render_html(data, today, article_count=len(articles)),
         plain_body=_render_plain(data, today, article_count=len(articles)),
-        new_dated_memories=data.get("nouvelles_memoires_datees", []),
-        new_permanent_memories=data.get("nouvelles_memoires_permanentes", []),
     )
 
 

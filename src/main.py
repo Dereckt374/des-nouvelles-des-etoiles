@@ -1,10 +1,8 @@
 """
 Orchestrator — runs the full pipeline:
   1. Fetch new articles from RSS feeds
-  2. Load memory context + today's reminders
-  3. Synthesize digest via Claude API
-  4. Update memory with new entries
-  5. Send digest by email
+  2. Synthesize digest via Mistral API
+  3. Send digest by email
 
 Usage:
   python src/main.py              # full run
@@ -56,35 +54,17 @@ def run(dry_run: bool = False) -> None:
         log.info("No new articles — skipping digest")
         return
 
-    # --- 2. Load memory ---
-    from memory import read_memory, get_todays_reminders
-
-    memory_content = read_memory()
-    reminders = get_todays_reminders()
-    if reminders:
-        log.info("Today's reminders: %s", reminders)
-
-    # --- 3. Synthesize ---
+    # --- 2. Synthesize ---
     from synthesizer import synthesize
 
     mistral_cfg = settings.get("mistral", {})
     result = synthesize(
         articles=articles,
-        memory_content=memory_content,
-        reminders=reminders,
         model=mistral_cfg.get("model", "mistral-small-latest"),
         api_key=mistral_cfg["api_key"],
     )
 
-    # --- 4. Update memory ---
-    from memory import apply_memory_update
-
-    apply_memory_update(
-        new_dated=result.new_dated_memories,
-        new_permanent=result.new_permanent_memories,
-    )
-
-    # --- 5. Send email ---
+    # --- 3. Send email ---
     if dry_run:
         log.info("Dry-run mode — email not sent")
         output_path = Path(__file__).parent.parent / "data" / "last_digest.html"
