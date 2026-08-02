@@ -6,7 +6,7 @@ Digest quotidien d'actualité spatiale, généré par IA et envoyé par email ch
 
 - **Python 3.11+**
 - **feedparser** — lecture des flux RSS/Atom
-- **anthropic** — synthèse via Claude (avec prompt caching)
+- **mistralai** — synthèse via l'API Mistral
 - **smtplib** — envoi email (compatible Mailjet, Resend, etc.)
 - **SQLite** — déduplication des articles vus
 
@@ -36,6 +36,9 @@ python src/main.py --dry-run
 python src/main.py
 ```
 
+En `--dry-run`, les articles ne sont **pas** marqués comme vus en base : on peut
+relancer autant de fois qu'on veut sans priver le prochain digest réel de son contenu.
+
 ## Planification (VPS Linux)
 
 ```bash
@@ -49,14 +52,16 @@ chmod +x cron/digest.sh
 
 ```
 config/
-  feeds.yaml              # Liste des flux RSS
+  feeds.yaml              # Flux RSS, groupés par usage
   settings.yaml           # Secrets (gitignored)
   settings.yaml.example   # Template de configuration
 
 src/
+  models.py               # Item / Section / Digest + ordre des sections
   fetcher.py              # Lecture RSS + déduplication SQLite
-  synthesizer.py          # Appel Claude API + rendu HTML/texte
-  memory.py               # Mémoire persistante (data/memory.md)
+  synthesizer.py          # Appel Mistral API → sections d'actualité
+  renderer.py             # Rendu HTML (email) et texte
+  memory.py               # Mémoire persistante (data/memory.md) — inutilisé
   mailer.py               # Envoi SMTP
   main.py                 # Orchestrateur + --dry-run
 
@@ -67,6 +72,27 @@ data/
 cron/
   digest.sh               # Script pour le cron VPS
 ```
+
+## Sections du digest
+
+Le mail est composé de sections rendues dans un **ordre fixe**, défini par
+`SECTION_RANK` dans `src/models.py`. Chaque source alimente sa propre section :
+peu importe qu'elle vienne du LLM ou non, elle produit des objets `Section`.
+
+| Groupe `feeds.yaml` | Section | Traitement |
+|---|---|---|
+| `feeds` | Suivi d'actualité | synthèse et regroupement par le LLM |
+| `custom_feeds` | Blogs & personnalités suivis | **aucun LLM** — billets affichés tels quels |
+
+### Flux customs
+
+`custom_feeds` regroupe les voix suivies personnellement (blogs d'experts,
+chercheurs). Leur formulation d'origine est ce qui a de la valeur : les billets
+sont affichés verbatim, dans leur propre section, sans résumé ni reformulation,
+et sans remonter dans les autres sections.
+
+Leur fenêtre de collecte est réglée séparément (`digest.custom_feeds` dans
+`settings.yaml`), car ces auteurs publient moins souvent que les sites d'actualité.
 
 ## Mémoire persistante
 

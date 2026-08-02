@@ -3,7 +3,14 @@
 
 mistral:
   api_key: "votre_cle_api_mistral"     # console.mistral.ai → API Keys
-  model: "mistral-small-latest"        # Gratuit sur le free tier
+  model: "mistral-small-latest"        # Modèle par défaut — gratuit sur le free tier
+
+  # Modèle par usage. Toute clé absente retombe sur `model` ci-dessus.
+  # Permet de garder un modèle économique pour le tri de masse et d'en
+  # brancher un plus puissant sur les sections d'analyse.
+  models:
+    news: "mistral-small-latest"
+    # competition: "mistral-large-latest"   # (à venir)
 
 email:
   smtp_host: "smtp.gmail.com"
@@ -21,3 +28,9 @@ digest:
   lookback_days: 2
   # Langue de la synthèse générée
   language: "fr"
+
+  # Section "Blogs & personnalités suivis" (groupe custom_feeds de feeds.yaml).
+  # Fenêtre plus large que l'actualité : ces auteurs publient moins souvent.
+  custom_feeds:
+    max_items: 15
+    lookback_days: 7

@@ -1,3 +1,6 @@
+# ---------------------------------------------------------------------------
+# feeds — actualité générale, synthétisée par le LLM
+# ---------------------------------------------------------------------------
 feeds:
   - url: https://www.lesnumeriques.com/science-espace/rss.xml
     name: Les Numériques — Science & Espace
@@ -66,3 +69,28 @@ feeds:
   - url: https://www.esa.int/rssfeed/TopNews
     name: ESA — Top News
     lang: en
+
+
+# ---------------------------------------------------------------------------
+# custom_feeds — voix et blogs suivis personnellement.
+# Affichés tels quels dans leur propre section, sans passer par le LLM :
+# c'est la formulation de l'auteur qui a de la valeur.
+# ---------------------------------------------------------------------------
+custom_feeds:
+  - url: https://destevez.net/feed/
+    name: Daniel Estévez
+    lang: en
+
+  # Suggestions dans le même esprit — décommenter pour activer :
+
+  # - url: https://www.elidourado.com/feed
+  #   name: Eli Dourado
+  #   lang: en
+
+  # - url: https://caseyhandmer.wordpress.com/feed/
+  #   name: Casey Handmer
+  #   lang: en
+
+  # - url: https://planet4589.org/space/jsr/jsr.xml
+  #   name: Jonathan McDowell — Jonathan's Space Report
+  #   lang: en
