@@ -51,6 +51,22 @@ def _model_for(mistral_cfg: dict, usage: str) -> str:
     return mistral_cfg.get("models", {}).get(usage, default)
 
 
+def _launch_section(launch_cfg: dict):
+    """Launch window section, or None when disabled or unreachable."""
+    if not launch_cfg.get("enabled", True):
+        return None
+
+    from launches import build_section, fetch_launches
+
+    return build_section(
+        fetch_launches(
+            days_back=launch_cfg.get("days_back", 1),
+            days_ahead=launch_cfg.get("days_ahead", 1),
+            limit=launch_cfg.get("max_launches", 40),
+        )
+    )
+
+
 def _custom_feeds_section(articles: list[dict]):
     """Builds the custom-feeds section verbatim — no LLM involved.
 
@@ -132,6 +148,11 @@ def run(dry_run: bool = False) -> None:
         plain_body = synthesis.raw_error
     else:
         sections = list(synthesis.sections)
+
+        launch_section = _launch_section(digest_cfg.get("launches", {}))
+        if launch_section:
+            sections.append(launch_section)
+
         if custom_articles:
             sections.append(_custom_feeds_section(custom_articles))
 

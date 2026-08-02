@@ -155,12 +155,21 @@ def _item_row(item: Item) -> str:
         if item.summary
         else ""
     )
+    marker = _C_HLBORDER if item.accent else _C_BORDER
+    title_style = f"font-size:14px;font-weight:bold;color:{_C_ACCENT};line-height:1.4;"
+    # Entries without a source link (a grouped routine line) stay plain text
+    # rather than becoming a dead anchor.
+    title_html = (
+        f'<a href="{escape(item.url, quote=True)}" style="{title_style}'
+        f'text-decoration:none;">{escape(item.title)}</a>'
+        if item.url
+        else f'<span style="{title_style}">{escape(item.title)}</span>'
+    )
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
   <tr>
-    <td style="padding-left:12px;border-left:3px solid {_C_BORDER};">
-      <a href="{escape(item.url or '#', quote=True)}" style="font-size:14px;font-weight:bold;color:{_C_ACCENT};
-                             text-decoration:none;line-height:1.4;">{escape(item.title)}</a>
+    <td style="padding-left:12px;border-left:3px solid {marker};">
+      {title_html}
       <span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;
                    margin-left:6px;">{meta}</span>
       {summary_html}
@@ -214,10 +223,12 @@ def render_plain(digest: Digest) -> str:
             lines.append(f"({section.subtitle})")
         for item in section.items:
             date_str = f" · {item.date}" if item.date else ""
-            lines.append(f"  [{item.source}]{date_str} {item.title}")
+            prefix = f"[{item.source}]{date_str} " if item.source or date_str else ""
+            lines.append(f"  {prefix}{item.title}")
             if item.summary:
                 lines.append(f"  {item.summary}")
-            lines.append(f"  {item.url}")
+            if item.url:
+                lines.append(f"  {item.url}")
             lines.append("")
 
     return "\n".join(lines)

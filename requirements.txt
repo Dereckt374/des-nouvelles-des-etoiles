@@ -1,3 +1,5 @@
 feedparser>=6.0.11
 PyYAML>=6.0.2
 mistralai>=1.0.0
+# Windows ships no system tz database; zoneinfo needs this to resolve Europe/Paris.
+tzdata>=2024.1

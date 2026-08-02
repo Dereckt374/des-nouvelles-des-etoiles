@@ -15,13 +15,18 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Item:
-    """A single entry displayed inside a section."""
+    """A single entry displayed inside a section.
+
+    `accent` marks an entry worth the reader's eye — a watched competitor's
+    launch, say — and the renderer gives it a coloured side marker.
+    """
 
     title: str
     url: str = ""
     source: str = ""
     date: str = ""
     summary: str = ""
+    accent: bool = False
 
 
 @dataclass

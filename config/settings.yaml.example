@@ -29,6 +29,15 @@ digest:
   # Langue de la synthèse générée
   language: "fr"
 
+  # Section "Lancements" — données Launch Library 2 (thespacedevs.com).
+  # Aucune clé API requise ; le tier gratuit tolère quelques appels par heure,
+  # et le digest n'en fait qu'un par exécution.
+  launches:
+    enabled: true
+    days_back: 1        # résultats des tirs récents (succès / échec)
+    days_ahead: 1       # tirs programmés à venir
+    max_launches: 40
+
   # Section "Blogs & personnalités suivis" (groupe custom_feeds de feeds.yaml).
   # Fenêtre plus large que l'actualité : ces auteurs publient moins souvent.
   custom_feeds:

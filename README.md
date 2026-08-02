@@ -58,12 +58,14 @@ chmod +x cron/digest.sh
 ```
 config/
   feeds.yaml              # Flux RSS, groupés par usage
+  competitors.yaml        # Acteurs suivis + missions routinières
   settings.yaml           # Secrets (gitignored)
   settings.yaml.example   # Template de configuration
 
 src/
   models.py               # Item / Section / Digest + ordre des sections
   fetcher.py              # Lecture RSS + déduplication SQLite
+  launches.py             # Launch Library 2 → section Lancements
   synthesizer.py          # Appel Mistral API → sections d'actualité
   renderer.py             # Rendu HTML (email) et texte
   memory.py               # Mémoire persistante (data/memory.md) — inutilisé
@@ -84,10 +86,26 @@ Le mail est composé de sections rendues dans un **ordre fixe**, défini par
 `SECTION_RANK` dans `src/models.py`. Chaque source alimente sa propre section :
 peu importe qu'elle vienne du LLM ou non, elle produit des objets `Section`.
 
-| Groupe `feeds.yaml` | Section | Traitement |
+| Source | Section | Traitement |
 |---|---|---|
-| `feeds` | Suivi d'actualité | synthèse et regroupement par le LLM |
-| `custom_feeds` | Blogs & personnalités suivis | **aucun LLM** — billets affichés tels quels |
+| Launch Library 2 | Lancements | **aucun LLM** — données factuelles de l'API |
+| `feeds.yaml` → `feeds` | Suivi d'actualité | synthèse et regroupement par le LLM |
+| `feeds.yaml` → `custom_feeds` | Blogs & personnalités suivis | **aucun LLM** — billets affichés tels quels |
+
+### Lancements
+
+Les tirs proviennent de l'API publique [Launch Library 2](https://thespacedevs.com)
+(aucune clé requise, un appel par exécution). La fenêtre couvre les résultats
+récents et les tirs à venir — réglable via `digest.launches` dans `settings.yaml`.
+
+Les heures sont converties en heure de Paris et **jamais inventées** : quand
+l'API indique une précision à l'heure ou à la journée, c'est annoncé comme tel
+(« vers 16h », « heure non figée ») plutôt qu'affiché comme un T-0 ferme.
+
+Les opérateurs listés dans `config/competitors.yaml` obtiennent une fiche
+enrichie (réutilisabilité, capacité LEO, coût au tir, historique de fiabilité)
+et un liseré de mise en avant ; les autres, une ligne compacte. Les vols de
+constellation listés sous `routine_missions` sont regroupés en une ligne.
 
 ### Flux customs
 

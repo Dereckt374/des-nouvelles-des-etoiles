@@ -1,0 +1,142 @@
+# Acteurs suivis nommément — segment lanceur léger élargi (< 2 t en LEO).
+#
+# Un lancement est "mis en avant" (fiche enrichie) si son opérateur OU son
+# lanceur correspond à une entrée ci-dessous. La correspondance est faite sur
+# le nom normalisé (casse et accents ignorés), en cherchant l'alias comme
+# sous-chaîne du nom renvoyé par Launch Library 2.
+#
+# `aliases` sert quand l'API nomme l'entreprise autrement que la presse
+# (ex. Space Pioneer y figure sous sa raison sociale chinoise).
+# `vehicles` permet de rattraper les cas où l'opérateur diffère du constructeur.
+
+competitors:
+  # --- Europe ---------------------------------------------------------------
+  - name: Isar Aerospace
+    region: europe
+    vehicles: [Spectrum]
+
+  - name: Rocket Factory Augsburg
+    region: europe
+    aliases: [Rocket Factory, RFA]
+    vehicles: [RFA One]
+
+  - name: Orbex
+    region: europe
+    vehicles: [Prime]
+
+  - name: Skyrora
+    region: europe
+    vehicles: [Skyrora XL]
+
+  - name: PLD Space
+    region: europe
+    vehicles: [Miura]
+
+  - name: Latitude
+    region: europe
+    vehicles: [Zephyr]
+
+  - name: MaiaSpace
+    region: europe
+    aliases: [Maia Space]
+    vehicles: [Maia]
+
+  - name: HyImpulse
+    region: europe
+    aliases: [HyImpulse Technologies]
+    vehicles: [SL1]
+
+  - name: Avio
+    region: europe
+    aliases: [Avio S.p.A]
+    vehicles: [Vega]
+
+  # --- Amérique du Nord -----------------------------------------------------
+  - name: Rocket Lab
+    region: usa
+    vehicles: [Electron, Neutron, HASTE]
+
+  - name: Firefly Aerospace
+    region: usa
+    aliases: [Firefly]
+    vehicles: [Alpha]
+
+  - name: Stoke Space
+    region: usa
+    vehicles: [Nova]
+
+  - name: Relativity Space
+    region: usa
+    aliases: [Relativity]
+    vehicles: [Terran]
+
+  - name: Long Wall
+    region: usa
+    aliases: [ABL Space Systems, ABL]
+    vehicles: [RS1]
+
+  - name: Astra Space
+    region: usa
+    aliases: [Astra]
+    vehicles: [Astra Rocket, Rocket 4]
+
+  # --- Asie-Pacifique -------------------------------------------------------
+  - name: Gilmour Space Technologies
+    region: apac
+    aliases: [Gilmour]
+    vehicles: [Eris]
+
+  - name: Space One
+    region: apac
+    vehicles: [Kairos]
+
+  - name: Interstellar Technologies
+    region: apac
+    vehicles: [ZERO, MOMO]
+
+  - name: Innospace
+    region: apac
+    vehicles: [HANBIT]
+
+  - name: Skyroot Aerospace
+    region: apac
+    aliases: [Skyroot]
+    vehicles: [Vikram]
+
+  - name: Agnikul Cosmos
+    region: apac
+    aliases: [Agnikul]
+    vehicles: [Agnibaan]
+
+  - name: Galactic Energy
+    region: apac
+    vehicles: [Ceres, Pallas]
+
+  - name: LandSpace
+    region: apac
+    aliases: [Land Space]
+    vehicles: [Zhuque]
+
+  - name: Space Pioneer
+    region: apac
+    aliases: [Beijing Tianbing, Tianbing]
+    vehicles: [Tianlong]
+
+  - name: Deep Blue Aerospace
+    region: apac
+    aliases: [Deep Blue]
+    vehicles: [Nebula]
+
+  - name: Orienspace
+    region: apac
+    vehicles: [Gravity]
+
+  - name: i-Space
+    region: apac
+    aliases: [iSpace, Interstellar Glory, Beijing Interstellar]
+    vehicles: [Hyperbola]
+
+# Missions considérées comme routinières : regroupées en une seule ligne pour
+# ne pas noyer la section (SpaceX représente à lui seul ~la moitié des tirs).
+routine_missions:
+  - Starlink
