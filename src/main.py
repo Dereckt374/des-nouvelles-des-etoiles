@@ -82,22 +82,18 @@ def run(dry_run: bool = False) -> None:
     settings = load_settings()
     digest_cfg = settings.get("digest", {})
     mistral_cfg = settings.get("mistral", {})
-    mark_seen = not dry_run
 
-    # Validated before fetching: a real run marks articles as seen as it goes,
-    # so bailing out afterwards would silently burn them.
     if not mistral_cfg.get("api_key"):
         log.error("No mistral.api_key in settings.yaml — see config/settings.yaml.example")
         sys.exit(1)
 
-    # --- 1. Fetch ---
-    from fetcher import fetch_new_articles
+    # --- 1. Fetch (read-only: nothing is recorded until the mail is out) ---
+    from fetcher import fetch_new_articles, mark_seen
 
     articles = fetch_new_articles(
         lookback_days=digest_cfg.get("lookback_days", 2),
         max_total=digest_cfg.get("max_articles", 40),
         group="feeds",
-        mark_seen=mark_seen,
     )
 
     custom_cfg = digest_cfg.get("custom_feeds", {})
@@ -105,7 +101,6 @@ def run(dry_run: bool = False) -> None:
         lookback_days=custom_cfg.get("lookback_days", 7),
         max_total=custom_cfg.get("max_items", 15),
         group="custom_feeds",
-        mark_seen=mark_seen,
     )
 
     log.info(
@@ -149,9 +144,9 @@ def run(dry_run: bool = False) -> None:
         html_body = render_html(digest)
         plain_body = render_plain(digest)
 
-    # --- 4. Send ---
+    # --- 4. Send, then record ---
     if dry_run:
-        log.info("Dry-run mode — email not sent, articles not marked as seen")
+        log.info("Dry-run mode — email not sent, articles left unread")
         output_path = Path(__file__).parent.parent / "data" / "last_digest.html"
         output_path.write_text(html_body, encoding="utf-8")
         log.info("Digest written to %s", output_path)
@@ -176,6 +171,14 @@ def run(dry_run: bool = False) -> None:
         sender_name=email_cfg.get("sender_name", "Des nouvelles des étoiles"),
         recipient=email_cfg["recipient"],
     )
+
+    # Only now are the articles considered delivered. On the raw_error path we
+    # deliberately leave them unmarked: the mail that went out is a parse dump,
+    # so tomorrow's run should get another shot at digesting them properly.
+    if synthesis.raw_error:
+        log.warning("Digest sent in raw form — articles left unread for the next run")
+    else:
+        mark_seen(articles + custom_articles)
 
 
 if __name__ == "__main__":

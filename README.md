@@ -36,8 +36,13 @@ python src/main.py --dry-run
 python src/main.py
 ```
 
-En `--dry-run`, les articles ne sont **pas** marqués comme vus en base : on peut
-relancer autant de fois qu'on veut sans priver le prochain digest réel de son contenu.
+Un article n'est marqué « vu » en base **qu'une fois le mail réellement parti**.
+Conséquences :
+
+- `--dry-run` est rejouable à volonté sans priver le digest réel de son contenu ;
+- une panne (API LLM, SMTP) ne consomme rien : les articles repassent au run suivant ;
+- si le modèle renvoie du JSON invalide, le mail brut est envoyé mais les articles
+  restent en attente, pour être correctement synthétisés le lendemain.
 
 ## Planification (VPS Linux)
 

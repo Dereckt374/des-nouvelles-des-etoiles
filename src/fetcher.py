@@ -6,6 +6,11 @@ Feeds are declared in config/feeds.yaml under *groups* (`feeds`, `custom_feeds`,
 Each group is fetched independently and feeds its own section of the digest.
 Deduplication is global: the seen-table is keyed on (feed_url, guid), so the
 same entry is never reported twice even if a URL appears in two groups.
+
+Fetching never writes: articles are recorded only by `mark_seen()`, which the
+orchestrator calls once the digest has actually been delivered. Anything that
+fails in between (LLM outage, SMTP error) therefore leaves the articles pending
+for the next run instead of losing them.
 """
 
 import html
@@ -91,20 +96,42 @@ def load_feeds(group: str = "feeds") -> list[dict]:
     return data.get(group) or []
 
 
+def mark_seen(articles: list[dict]) -> None:
+    """Records articles as reported, so they never show up in a later digest.
+
+    Deliberately separate from fetching: call it only once the digest has been
+    delivered. Marking during collection means a crash between the fetch and
+    the send silently swallows the day's articles for good.
+    """
+    if not articles:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    conn.executemany(
+        """INSERT OR IGNORE INTO seen_articles
+           (feed_url, guid, title, url, published, fetched_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        [
+            (a["feed_url"], a["guid"], a["title"], a["url"], a["published"], now)
+            for a in articles
+        ],
+    )
+    conn.commit()
+    conn.close()
+    log.info("Marked %d articles as seen", len(articles))
+
+
 def fetch_new_articles(
     lookback_days: int = 2,
     max_total: int = 40,
     group: str = "feeds",
-    mark_seen: bool = True,
 ) -> list[dict]:
     """
     Returns a list of new articles (not previously seen) published within
     lookback_days. Each article is a dict with keys:
         feed_name, feed_url, guid, title, url, published, summary
 
-    When `mark_seen` is False nothing is written to the database, so the run
-    is repeatable — this is what --dry-run uses, otherwise every local test
-    would burn articles that the next real digest would then never report.
+    Read-only — see `mark_seen()`.
     """
     feeds = load_feeds(group)
     if not feeds:
@@ -155,25 +182,14 @@ def fetch_new_articles(
                     "summary": _clean_summary(entry),
                 })
 
-                if mark_seen:
-                    conn.execute(
-                        """INSERT OR IGNORE INTO seen_articles
-                           (feed_url, guid, title, url, published, fetched_at)
-                           VALUES (?, ?, ?, ?, ?, ?)""",
-                        (feed_url, guid, title, url, published,
-                         datetime.now(timezone.utc).isoformat()),
-                    )
-
         except Exception as e:
             log.error("Failed to fetch feed %s: %s", feed_name, e)
 
-    if mark_seen:
-        conn.commit()
     conn.close()
 
     log.info(
-        "Group '%s': fetched %d new articles across %d feeds%s",
-        group, len(results), len(feeds), "" if mark_seen else " (not marked as seen)",
+        "Group '%s': fetched %d new articles across %d feeds",
+        group, len(results), len(feeds),
     )
 
     # Cap at max_total, most recent first
