@@ -4,7 +4,6 @@ Sends the daily digest by email via SMTP (compatible Mailjet, Resend SMTP, etc.)
 
 import logging
 import smtplib
-from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -21,9 +20,11 @@ def send_digest(
     sender_address: str,
     sender_name: str,
     recipient: str,
+    date_label: str,
 ) -> None:
-    today = date.today().strftime("%d %B %Y")
-    subject = f"Des nouvelles des étoiles — {today}"
+    """Sends the digest. `date_label` is formatted upstream so the subject and
+    the mail header can never disagree, and so no date wording lives here."""
+    subject = f"Des nouvelles des étoiles — {date_label}"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject

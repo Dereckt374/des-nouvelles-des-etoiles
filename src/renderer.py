@@ -5,9 +5,32 @@ All styles are inline and the layout is table-based, for maximum
 email-client compatibility.
 """
 
+from datetime import date
 from html import escape
 
 from models import Digest, Item, Section, order_sections
+
+# Day and month names are spelled out rather than obtained from strftime.
+# `%A` and `%B` follow the host's LC_TIME, which on the VPS is English — the
+# header used to read "Saturday 08 August 2026" in an otherwise French mail.
+# Hardcoding keeps the wording French wherever the digest runs, with no
+# dependency on a locale being installed.
+_JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+_MOIS = (
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+)
+
+
+def format_date_fr(day: date, weekday: bool = True) -> str:
+    """'samedi 8 août 2026', or '8 août 2026' without the weekday.
+
+    French usage drops the leading zero and writes the first of the month
+    as "1er".
+    """
+    number = "1er" if day.day == 1 else str(day.day)
+    label = f"{number} {_MOIS[day.month - 1]} {day.year}"
+    return f"{_JOURS[day.weekday()]} {label}" if weekday else label
 
 # Palette
 _C_BG       = "#f4f6fb"

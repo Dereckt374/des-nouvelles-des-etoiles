@@ -1,8 +1,13 @@
 """
 Orchestrator — runs the full pipeline:
-  1. Fetch new articles from the RSS feed groups
+  1. Fetch the feed groups: news, followed blogs, forum threads, X accounts
   2. Synthesize the news sections via the Mistral API
-  3. Assemble the digest and send it by email
+  3. Collect the launch window and its events from Launch Library 2
+  4. Assemble every Section in rank order and send the digest by email
+
+Only step 2 involves the LLM. Launches, forums and followed accounts are
+rendered from their source as-is — facts and verbatim quotes both lose from
+being paraphrased.
 
 Usage:
   python src/main.py              # full run
@@ -191,10 +196,11 @@ def run(dry_run: bool = False) -> None:
 
     # --- 2. Synthesize the news sections ---
     from models import Digest
-    from renderer import render_error, render_html, render_plain
+    from renderer import format_date_fr, render_error, render_html, render_plain
     from synthesizer import synthesize
 
-    date_label = date.today().strftime("%A %d %B %Y")
+    today = date.today()
+    date_label = format_date_fr(today)
 
     synthesis = synthesize(
         articles=articles,
@@ -258,6 +264,7 @@ def run(dry_run: bool = False) -> None:
         sender_address=email_cfg["sender_address"],
         sender_name=email_cfg.get("sender_name", "Des nouvelles des étoiles"),
         recipient=email_cfg["recipient"],
+        date_label=format_date_fr(today, weekday=False),
     )
 
     # Only now are the articles considered delivered. On the raw_error path we
