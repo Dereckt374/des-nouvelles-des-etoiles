@@ -125,6 +125,16 @@ def _nitter_article(article: dict) -> Optional[dict]:
 
 _TRANSFORMS = {"nitter": _nitter_article}
 
+# Sources whose entry stands for an *ongoing thread* rather than a one-off
+# publication. A forum feed reuses the topic URL as the guid however much the
+# discussion grows, so keying on it alone would announce a thread once and then
+# suppress it for good — exactly the wrong behaviour for a discussion you follow
+# precisely to see it move. Folding the last-activity timestamp into the key
+# makes each new burst of posts a new entry. The feed's description carries the
+# thread's most recent message, so the re-report brings fresh content, not a
+# repeat of the opening post.
+_ACTIVITY_KEYED = {"forum"}
+
 
 def load_feeds(group: str = "feeds") -> list[dict]:
     """Returns the feed definitions declared under `group` in feeds.yaml."""
@@ -182,7 +192,8 @@ def fetch_new_articles(
     for feed_cfg in feeds:
         feed_url = feed_cfg["url"]
         feed_name = feed_cfg.get("name", feed_url)
-        transform = _TRANSFORMS.get(feed_cfg.get("kind") or "")
+        kind = feed_cfg.get("kind") or ""
+        transform = _TRANSFORMS.get(kind)
         try:
             parsed = feedparser.parse(feed_url, request_headers={"User-Agent": USER_AGENT})
             if parsed.bozo and not parsed.entries:
@@ -197,6 +208,9 @@ def fetch_new_articles(
                 pub = _entry_published(entry)
                 if pub and pub < cutoff:
                     continue
+
+                if kind in _ACTIVITY_KEYED and pub:
+                    guid = f"{guid}#{pub.isoformat()}"
 
                 # Check if already seen
                 row = conn.execute(

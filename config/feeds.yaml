@@ -124,8 +124,14 @@ custom_feeds:
 #
 # Le forum de la conquête spatiale (Forumactif) expose un flux par rubrique,
 # via /feed/?f=<id>. On ne suit donc que les rubriques choisies, pas le flux
-# global du forum. Chaque entrée correspond à un *fil* (pas à un message), il
-# n'y a donc pas de répétition quand une discussion s'anime.
+# global du forum.
+#
+# Une entrée correspond à un *fil* et non à un message : le flux liste les
+# discussions récemment animées, avec la date et le texte de leur dernier
+# message. Le guid étant l'adresse du fil, il ne change jamais — d'où le
+# `kind: forum`, qui intègre la date de dernière activité à la clé de
+# déduplication (voir src/fetcher.py). Sans lui, un fil ne serait signalé
+# qu'une fois puis passé sous silence, même très actif ensuite.
 #
 # Pour ajouter une rubrique : ouvrir la page de la rubrique, relever l'id
 # dans l'URL (/f49-spacex → 49) et l'ajouter ci-dessous.
@@ -133,38 +139,47 @@ custom_feeds:
 forums:
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=10
     name: Forum CS — Europe
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=18
     name: Forum CS — Propulsions et lanceurs
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=4
     name: Forum CS — Chine
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=11
     name: Forum CS — Asie
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=49
     name: Forum CS — SpaceX
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=59
     name: Forum CS — Rocket Lab
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=61
     name: Forum CS — Blue Origin
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=53
     name: Forum CS — ULA
+    kind: forum
     lang: fr
 
   - url: https://www.forum-conquete-spatiale.fr/feed/?f=55
     name: Forum CS — Autres sociétés privées US
+    kind: forum
     lang: fr
 
 

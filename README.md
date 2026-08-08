@@ -165,10 +165,23 @@ par rubrique via `/feed/?f=<id>` — y compris des sous-rubriques par acteur
 (SpaceX, Rocket Lab, Blue Origin, ULA). Pour en ajouter une, relever l'id dans
 l'URL de la rubrique (`/f49-spacex` → 49).
 
-Une entrée correspond à un **fil**, pas à un message : une discussion animée
-n'apparaît donc qu'une fois. Le filtrage par sujet n'est en revanche pas
+**Aucun scraping** : ces flux sont publiés par le forum lui-même, et déclarés
+dans le `<head>` de ses pages. Le filtrage par sujet n'est en revanche pas
 possible côté serveur — `/feed/?t=<id>` ignore le paramètre et renvoie
 l'intégralité du forum.
+
+**Détection de l'activité.** Une entrée représente un *fil*, pas un message :
+le flux liste les discussions récemment animées, avec la date et le texte de
+leur dernier message. Le guid servi est l'adresse du fil, donc il ne change
+jamais, quel que soit le nombre de réponses. Une déduplication classique
+signalerait donc chaque discussion une seule fois, puis la tairait à jamais —
+l'inverse de ce qu'on attend d'un fil qu'on suit précisément pour le voir
+avancer.
+
+D'où `kind: forum`, qui intègre la date de dernière activité à la clé de
+déduplication. Le fil ressort à chaque nouvelle salve de messages, et reste
+silencieux tant que rien ne bouge. Comme la description du flux porte le
+dernier message, chaque réapparition apporte du contenu neuf.
 
 ### Comptes suivis
 
