@@ -19,6 +19,17 @@ class Item:
 
     `accent` marks an entry worth the reader's eye — a watched competitor's
     launch, say — and the renderer gives it a coloured side marker.
+
+    Most fields are optional so that a plain feed entry stays a two-liner
+    while a launch card can carry a logo, several fact lines and reference
+    links without needing a second Item type:
+
+    - `summary`  one paragraph of prose (LLM text, feed excerpt)
+    - `details`  short factual lines, rendered one per row
+    - `links`    (label, url) pairs shown as a small link row
+    - `image_url` square thumbnail pinned left of the entry
+    - `tone`     colours the `source` label as a status pill
+    - `heading`  turns the entry into a sub-header inside the section
     """
 
     title: str
@@ -26,7 +37,13 @@ class Item:
     source: str = ""
     date: str = ""
     summary: str = ""
+    details: list[str] = field(default_factory=list)
+    links: list[tuple[str, str]] = field(default_factory=list)
+    image_url: str = ""
+    image_alt: str = ""
+    tone: str = ""
     accent: bool = False
+    heading: bool = False
 
 
 @dataclass

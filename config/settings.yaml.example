@@ -30,13 +30,24 @@ digest:
   language: "fr"
 
   # Section "Lancements" — données Launch Library 2 (thespacedevs.com).
-  # Aucune clé API requise ; le tier gratuit tolère quelques appels par heure,
-  # et le digest n'en fait qu'un par exécution.
+  # Aucune clé API requise ; le tier gratuit tolère une quinzaine d'appels par
+  # heure, et le digest en fait deux par exécution (tirs + événements).
+  #
+  # Les opérateurs de config/competitors.yaml reçoivent une fiche détaillée
+  # (performance du lanceur, fiabilité, météo, dernier point, liens Wikipédia) ;
+  # les autres tirs se réduisent à une ligne.
   launches:
     enabled: true
     days_back: 1        # résultats des tirs récents (succès / échec)
     days_ahead: 1       # tirs programmés à venir
     max_launches: 40
+
+    # Événements de la même fenêtre : sorties extravéhiculaires, amarrages,
+    # conférences de presse, événements célestes. Ils sont rares — quelques
+    # uns par semaine — donc sur une fenêtre de ±1 jour le sous-bloc est vide
+    # la plupart du temps. Élargir days_ahead donne davantage de matière.
+    events: true
+    max_events: 10
 
   # Section "Blogs & personnalités suivis" (groupe custom_feeds de feeds.yaml).
   # Fenêtre plus large que l'actualité : ces auteurs publient moins souvent.

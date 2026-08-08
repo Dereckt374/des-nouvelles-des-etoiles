@@ -95,17 +95,48 @@ peu importe qu'elle vienne du LLM ou non, elle produit des objets `Section`.
 ### Lancements
 
 Les tirs proviennent de l'API publique [Launch Library 2](https://thespacedevs.com)
-(aucune clé requise, un appel par exécution). La fenêtre couvre les résultats
-récents et les tirs à venir — réglable via `digest.launches` dans `settings.yaml`.
+(aucune clé requise, deux appels par exécution : `/launches/` et `/events/`).
+La fenêtre couvre les résultats récents et les tirs à venir — réglable via
+`digest.launches` dans `settings.yaml`.
 
 Les heures sont converties en heure de Paris et **jamais inventées** : quand
 l'API indique une précision à l'heure ou à la journée, c'est annoncé comme tel
 (« vers 16h », « heure non figée ») plutôt qu'affiché comme un T-0 ferme.
 
 Les opérateurs listés dans `config/competitors.yaml` obtiennent une fiche
-enrichie (réutilisabilité, capacité LEO, coût au tir, historique de fiabilité)
-et un liseré de mise en avant ; les autres, une ligne compacte. Les vols de
-constellation listés sous `routine_missions` sont regroupés en une ligne.
+détaillée et un liseré de mise en avant ; les autres, une ligne compacte. Les
+vols de constellation listés sous `routine_missions` sont regroupés en une ligne.
+La fiche détaillée porte quatre lignes de faits, chacune omise si l'API ne
+renseigne rien :
+
+| Ligne | Contenu |
+|---|---|
+| Performance | réutilisabilité, capacité LEO et GTO, poussée, dimensions, masse au décollage, coût au tir |
+| Fiabilité | nombre de tirs, taux de succès, échecs, succès consécutifs, premier vol, rotation record |
+| Météo | probabilité de conditions favorables et contraintes violées sur le pas de tir |
+| Dernier point | note la plus récente des contributeurs LL2 — souvent le meilleur signal sur un T-0 qui glisse |
+
+S'y ajoutent les liens Wikipédia du lanceur et de l'opérateur.
+
+**Logos.** Chaque entrée porte la vignette de l'opérateur, en lien distant. Le
+champ utilisé est `social_logo`, et non `logo` : il est carré chez tous les
+opérateurs vérifiés et embarque son propre fond opaque, ce qui garde lisible un
+logo blanc sur la carte blanche du mail. Sa vignette 256×256 est une réduction
+propre, alors que `logo.thumbnail_url` est un **recadrage centré** qui réduit une
+signature large à deux lettres illisibles. Les clients qui bloquent les images
+distantes (Outlook, Thunderbird) affichent l'abréviation de l'opérateur en
+texte alternatif.
+
+### Événements
+
+Le même intervalle est interrogé sur `/events/` : sorties extravéhiculaires,
+amarrages, conférences de presse, événements célestes. Ils apparaissent en
+sous-bloc de la section Lancements.
+
+Ces événements sont rares — quelques uns par semaine. Sur la fenêtre par défaut
+de ±1 jour, le sous-bloc est donc **vide la plupart du temps** ; élargir
+`days_ahead` donne davantage de matière. Leurs descriptions viennent de l'API en
+anglais et ne sont pas traduites.
 
 ### Flux customs
 

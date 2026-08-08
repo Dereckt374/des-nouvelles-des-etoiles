@@ -20,6 +20,23 @@ _C_MUTED    = "#6b7280"
 _C_BORDER   = "#e2e8f0"
 _C_HLBG     = "#fff7ed"
 _C_HLBORDER = "#f59e0b"
+_C_DETAIL   = "#4b5563"
+# Backdrop of the logo tile. It only shows through for the rare operator whose
+# logo is transparent; a mid grey keeps both pale and dark artwork legible.
+_C_TILE     = "#6b7280"
+
+# Status pill colours, keyed by Item.tone. Entries without a tone keep the
+# plain muted label used by news and feed entries.
+_TONES = {
+    "ok":   ("#e7f6ec", "#1c7a3e"),
+    "fail": ("#fdeaea", "#b3261e"),
+    "warn": ("#fff4e0", "#a05a0f"),
+    "go":   ("#e8f0fe", "#1a4fa0"),
+    "live": ("#ffe8ef", "#b3124f"),
+}
+
+_LOGO_PX = 44
+_LOGO_CELL_PX = 56
 
 
 def _article_count_label(n: int) -> str:
@@ -144,11 +161,102 @@ def _section_block(section: Section) -> str:
 </table>"""
 
 
-def _item_row(item: Item) -> str:
-    meta_parts = [f"— {item.source}"] if item.source else []
+def _meta_html(item: Item) -> str:
+    """The status label next to a title — a coloured pill when toned."""
+    if item.source and item.tone in _TONES:
+        bg, fg = _TONES[item.tone]
+        pill = (
+            f'<span style="display:inline-block;padding:2px 8px;border-radius:10px;'
+            f'background:{bg};color:{fg};font-size:10px;font-family:Arial,sans-serif;'
+            f'font-weight:bold;letter-spacing:0.5px;text-transform:uppercase;'
+            f'white-space:nowrap;">{escape(item.source)}</span>'
+        )
+        date = (
+            f'<span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;'
+            f'margin-left:6px;">{escape(item.date)}</span>'
+            if item.date
+            else ""
+        )
+        return f'<span style="margin-left:8px;">{pill}{date}</span>'
+
+    parts = [f"— {item.source}"] if item.source else []
     if item.date:
-        meta_parts.append(item.date)
-    meta = escape(" · ".join(meta_parts))
+        parts.append(item.date)
+    if not parts:
+        return ""
+    return (
+        f'<span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;'
+        f'margin-left:6px;">{escape(" · ".join(parts))}</span>'
+    )
+
+
+def _details_html(details: list[str]) -> str:
+    """Factual lines under a launch card, one per row."""
+    if not details:
+        return ""
+    rows = "".join(
+        f'<div style="margin:3px 0 0;font-size:12px;color:{_C_DETAIL};'
+        f'line-height:1.55;">{escape(d)}</div>'
+        for d in details
+    )
+    return f'<div style="margin-top:5px;">{rows}</div>'
+
+
+def _links_html(links: list[tuple[str, str]]) -> str:
+    """Reference pages — Wikipedia and the like — as a compact link row."""
+    if not links:
+        return ""
+    anchors = " · ".join(
+        f'<a href="{escape(url, quote=True)}" style="color:{_C_SECTION};'
+        f'text-decoration:underline;">{escape(label)}</a>'
+        for label, url in links
+        if url
+    )
+    if not anchors:
+        return ""
+    return (
+        f'<div style="margin-top:7px;font-size:11px;font-family:Arial,sans-serif;'
+        f'color:{_C_MUTED};">{anchors}</div>'
+    )
+
+
+def _logo_cell(item: Item) -> str:
+    """Square operator logo pinned left of the entry.
+
+    Only the width is pinned: the artwork is square in practice, and a
+    fallback of another ratio then scales down instead of overflowing. The
+    alt text carries the operator abbreviation, so a client that blocks
+    remote images still names who is flying.
+    """
+    return f"""
+    <td valign="top" width="{_LOGO_CELL_PX}"
+        style="width:{_LOGO_CELL_PX}px;padding-right:12px;">
+      <img src="{escape(item.image_url, quote=True)}" width="{_LOGO_PX}"
+           alt="{escape(item.image_alt, quote=True)}"
+           style="display:block;width:{_LOGO_PX}px;max-width:{_LOGO_PX}px;height:auto;
+                  border-radius:6px;background:{_C_TILE};">
+    </td>"""
+
+
+def _heading_row(item: Item) -> str:
+    """Sub-header separating two blocks inside one section."""
+    return f"""
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 12px;">
+  <tr>
+    <td style="padding-top:12px;border-top:1px solid {_C_BORDER};">
+      <p style="margin:0;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+                color:{_C_MUTED};font-family:Arial,sans-serif;font-weight:bold;">
+        {escape(item.title)}
+      </p>
+    </td>
+  </tr>
+</table>"""
+
+
+def _item_row(item: Item) -> str:
+    if item.heading:
+        return _heading_row(item)
+
     summary_html = (
         f'<p style="margin:4px 0 0;font-size:13px;color:{_C_TEXT};line-height:1.5;">'
         f'{escape(item.summary)}</p>'
@@ -165,14 +273,18 @@ def _item_row(item: Item) -> str:
         if item.url
         else f'<span style="{title_style}">{escape(item.title)}</span>'
     )
+    content = f"""
+      {title_html}
+      {_meta_html(item)}
+      {summary_html}
+      {_details_html(item.details)}
+      {_links_html(item.links)}"""
+
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
   <tr>
-    <td style="padding-left:12px;border-left:3px solid {marker};">
-      {title_html}
-      <span style="font-size:11px;color:{_C_MUTED};font-family:Arial,sans-serif;
-                   margin-left:6px;">{meta}</span>
-      {summary_html}
+    {_logo_cell(item) if item.image_url else ""}
+    <td valign="top" style="padding-left:12px;border-left:3px solid {marker};">{content}
     </td>
   </tr>
 </table>"""
@@ -222,11 +334,20 @@ def render_plain(digest: Digest) -> str:
         if section.subtitle:
             lines.append(f"({section.subtitle})")
         for item in section.items:
+            if item.heading:
+                lines.append(f"  {item.title.upper()}")
+                lines.append("")
+                continue
             date_str = f" · {item.date}" if item.date else ""
             prefix = f"[{item.source}]{date_str} " if item.source or date_str else ""
             lines.append(f"  {prefix}{item.title}")
             if item.summary:
                 lines.append(f"  {item.summary}")
+            for detail in item.details:
+                lines.append(f"    {detail}")
+            for label, url in item.links:
+                if url:
+                    lines.append(f"    {label} : {url}")
             if item.url:
                 lines.append(f"  {item.url}")
             lines.append("")

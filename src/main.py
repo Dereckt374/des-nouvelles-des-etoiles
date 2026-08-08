@@ -52,19 +52,35 @@ def _model_for(mistral_cfg: dict, usage: str) -> str:
 
 
 def _launch_section(launch_cfg: dict):
-    """Launch window section, or None when disabled or unreachable."""
+    """Launch window section, or None when disabled or unreachable.
+
+    Events share the launch window, so the reader gets the EVAs, dockings and
+    press conferences that sit around the day's tally rather than a separate
+    calendar to reconcile.
+    """
     if not launch_cfg.get("enabled", True):
         return None
 
-    from launches import build_section, fetch_launches
+    from launches import build_section, fetch_events, fetch_launches
 
-    return build_section(
-        fetch_launches(
-            days_back=launch_cfg.get("days_back", 1),
-            days_ahead=launch_cfg.get("days_ahead", 1),
-            limit=launch_cfg.get("max_launches", 40),
-        )
+    days_back = launch_cfg.get("days_back", 1)
+    days_ahead = launch_cfg.get("days_ahead", 1)
+
+    launches = fetch_launches(
+        days_back=days_back,
+        days_ahead=days_ahead,
+        limit=launch_cfg.get("max_launches", 40),
     )
+
+    events = []
+    if launch_cfg.get("events", True):
+        events = fetch_events(
+            days_back=days_back,
+            days_ahead=days_ahead,
+            limit=launch_cfg.get("max_events", 10),
+        )
+
+    return build_section(launches, events)
 
 
 def _custom_feeds_section(articles: list[dict]):
