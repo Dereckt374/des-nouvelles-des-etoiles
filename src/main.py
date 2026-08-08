@@ -61,7 +61,12 @@ def _launch_section(launch_cfg: dict):
     if not launch_cfg.get("enabled", True):
         return None
 
-    from launches import build_section, fetch_events, fetch_launches
+    from launches import (
+        build_section,
+        fetch_events,
+        fetch_launches,
+        fetch_next_launch,
+    )
 
     days_back = launch_cfg.get("days_back", 1)
     days_ahead = launch_cfg.get("days_ahead", 1)
@@ -80,7 +85,14 @@ def _launch_section(launch_cfg: dict):
             limit=launch_cfg.get("max_events", 10),
         )
 
-    return build_section(launches, events)
+    # Quiet window: stand in with the next launch on the calendar, so the
+    # section says "nothing today, here is what comes next" rather than
+    # disappearing. Costs a third API call only on those days.
+    next_launch = None
+    if not launches:
+        next_launch = fetch_next_launch()
+
+    return build_section(launches, events, next_launch)
 
 
 def _custom_feeds_section(articles: list[dict]):

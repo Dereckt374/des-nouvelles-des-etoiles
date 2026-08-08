@@ -118,6 +118,13 @@ renseigne rien :
 
 S'y ajoutent les liens Wikipédia du lanceur et de l'opérateur.
 
+**Fenêtre creuse.** Quand l'API ne renvoie aucun tir, la section ne disparaît
+pas : elle affiche une ligne unique pointant le prochain tir au calendrier, avec
+le délai en clair au-delà de demain (« dans 3 jours »). Cela coûte un troisième
+appel API, uniquement ces jours-là. Un repli déclenché par un simple manque de
+tir marquant serait trompeur, donc la ligne s'effface dès que la fenêtre contient
+quoi que ce soit — y compris de simples vols de constellation groupés.
+
 **Logos.** Chaque entrée porte la vignette de l'opérateur, en lien distant. Le
 champ utilisé est `social_logo`, et non `logo` : il est carré chez tous les
 opérateurs vérifiés et embarque son propre fond opaque, ce qui garde lisible un

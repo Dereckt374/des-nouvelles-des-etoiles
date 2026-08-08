@@ -420,6 +420,29 @@ def fetch_launches(
     return launches
 
 
+def fetch_next_launch(timeout: int = 30) -> Optional[Launch]:
+    """The next launch on the calendar, however far out it sits.
+
+    Called only when the window came back empty, so it costs a third API call
+    on quiet days and nothing at all the rest of the time. No horizon cap: at
+    roughly two orbital launches a day worldwide the answer is never far off,
+    and an honest date is more useful than a silent section.
+    """
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    results = _fetch(
+        API_ROOT,
+        {"net__gte": now, "ordering": "net", "limit": "1", "mode": "detailed"},
+        timeout,
+        "the next-launch line",
+    )
+    if not results:
+        return None
+
+    launch = _flatten(results[0], load_watchlist())
+    log.info("Next launch: %s (%s)", launch.name, launch.net)
+    return launch
+
+
 def fetch_events(
     days_back: int = 1,
     days_ahead: int = 1,
@@ -669,6 +692,31 @@ def _compact_item(launch: Launch, today: datetime) -> Item:
     )
 
 
+def _next_item(launch: Launch, today: datetime) -> Item:
+    """The one-liner that stands in for an empty window.
+
+    Beyond tomorrow the day alone reads as abstract, so the wait is spelled
+    out — '17/08 09h30' tells you when, 'dans 9 jours' tells you how far.
+    """
+    tail = [p for p in (launch.provider, launch.location) if p]
+    if launch.net:
+        delta = (launch.net.astimezone(PARIS).date() - today.astimezone(PARIS).date()).days
+        if delta >= 2:
+            tail.append(f"dans {delta} jours")
+
+    return Item(
+        title=f"Prochain tir — {_when(launch, today)} · {launch.rocket}"
+              f" · {launch.mission or '—'}",
+        url=launch.url,
+        source=launch.status,
+        tone=launch.tone,
+        summary=" · ".join(tail),
+        image_url=launch.logo_url,
+        image_alt=launch.provider_abbrev,
+        accent=launch.watched,
+    )
+
+
 def _routine_item(launches: list[Launch], today: datetime, label: str) -> Item:
     times = ", ".join(_when(l, today) for l in launches if l.net)
     count = len(launches)
@@ -712,11 +760,19 @@ def _event_item(event: Event, today: datetime) -> Item:
     )
 
 
-def _subtitle(launches: list[Launch], events: list[Event]) -> str:
+def _subtitle(
+    launches: list[Launch],
+    events: list[Event],
+    next_launch: Optional[Launch] = None,
+) -> str:
     parts = []
     if launches:
         count = len(launches)
         parts.append(f"{count} tir{'s' if count > 1 else ''} sur la fenêtre")
+    elif next_launch:
+        # Only worth stating when a forward-looking line explains the void; a
+        # section carrying nothing but events has no reason to mention tirs.
+        parts.append("aucun tir sur la fenêtre")
     if events:
         count = len(events)
         parts.append(f"{count} événement{'s' if count > 1 else ''}")
@@ -732,10 +788,17 @@ def _subtitle(launches: list[Launch], events: list[Event]) -> str:
 def build_section(
     launches: list[Launch],
     events: Optional[list[Event]] = None,
+    next_launch: Optional[Launch] = None,
 ) -> Optional[Section]:
-    """Turns the launch window into a digest section, or None if empty."""
+    """Turns the launch window into a digest section, or None if empty.
+
+    `next_launch` is the fallback for a quiet window: on a day with nothing to
+    report it keeps the section alive with a single forward-looking line,
+    rather than letting it vanish with no explanation. It is ignored as soon as
+    the window holds anything.
+    """
     events = events or []
-    if not launches and not events:
+    if not launches and not events and not next_launch:
         return None
 
     watchlist = load_watchlist()
@@ -759,6 +822,9 @@ def build_section(
     for label, group in routine.items():
         items.append(_routine_item(group, today, label))
 
+    if not launches and next_launch:
+        items.append(_next_item(next_launch, today))
+
     if events:
         # The heading only earns its place when it separates two blocks.
         if items:
@@ -767,7 +833,8 @@ def build_section(
 
     return Section(
         key="launches",
-        title=SECTION_TITLE if launches else EVENTS_TITLE,
+        # Only a section carrying nothing but events drops the launch heading.
+        title=SECTION_TITLE if (launches or next_launch) else EVENTS_TITLE,
         items=items,
-        subtitle=_subtitle(launches, events),
+        subtitle=_subtitle(launches, events, next_launch),
     )

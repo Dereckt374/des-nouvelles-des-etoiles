@@ -31,7 +31,8 @@ digest:
 
   # Section "Lancements" — données Launch Library 2 (thespacedevs.com).
   # Aucune clé API requise ; le tier gratuit tolère une quinzaine d'appels par
-  # heure, et le digest en fait deux par exécution (tirs + événements).
+  # heure, et le digest en fait deux par exécution (tirs + événements) — un
+  # troisième les jours sans aucun tir, pour aller chercher le prochain prévu.
   #
   # Les opérateurs de config/competitors.yaml reçoivent une fiche détaillée
   # (performance du lanceur, fiabilité, météo, dernier point, liens Wikipédia) ;
