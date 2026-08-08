@@ -91,6 +91,8 @@ peu importe qu'elle vienne du LLM ou non, elle produit des objets `Section`.
 | Launch Library 2 | Lancements | **aucun LLM** — données factuelles de l'API |
 | `feeds.yaml` → `feeds` | Suivi d'actualité | synthèse et regroupement par le LLM |
 | `feeds.yaml` → `custom_feeds` | Blogs & personnalités suivis | **aucun LLM** — billets affichés tels quels |
+| `feeds.yaml` → `forums` | Forums | **aucun LLM** — fils de discussion listés tels quels |
+| `feeds.yaml` → `social` | Comptes suivis | **aucun LLM** — messages X des concurrents |
 
 ### Lancements
 
@@ -154,6 +156,38 @@ et sans remonter dans les autres sections.
 
 Leur fenêtre de collecte est réglée séparément (`digest.custom_feeds` dans
 `settings.yaml`), car ces auteurs publient moins souvent que les sites d'actualité.
+
+### Forums
+
+`forums` suit des **rubriques choisies** du forum de la conquête spatiale, et
+non le flux global du site. Ce forum tourne sous Forumactif, qui expose un flux
+par rubrique via `/feed/?f=<id>` — y compris des sous-rubriques par acteur
+(SpaceX, Rocket Lab, Blue Origin, ULA). Pour en ajouter une, relever l'id dans
+l'URL de la rubrique (`/f49-spacex` → 49).
+
+Une entrée correspond à un **fil**, pas à un message : une discussion animée
+n'apparaît donc qu'une fois. Le filtrage par sujet n'est en revanche pas
+possible côté serveur — `/feed/?t=<id>` ignore le paramètre et renvoie
+l'intégralité du forum.
+
+### Comptes suivis
+
+`social` relaie les comptes X des concurrents. **X n'a plus d'API de lecture
+gratuite depuis 2023**, ces flux passent donc par Nitter, un relais tiers. Il
+faut en connaître les limites : c'est une dépendance fragile, dont les instances
+publiques ferment régulièrement, et son fonctionnement se situe hors des
+conditions d'utilisation de X. Si le relais tombe, la section disparaît sans
+casser le digest.
+
+Les flux marqués `kind: nitter` reçoivent un post-traitement (`src/fetcher.py`) :
+
+- **retweets et réponses écartés** — ce qui compte pour la veille concurrentielle,
+  c'est ce que l'entreprise dit elle-même ;
+- **liens réécrits vers `x.com`**, pour rester valides le jour où le relais
+  change ; l'identifiant du tweet, lui, est stable.
+
+Le mécanisme `kind` est générique : une nouvelle source aux mêmes besoins
+s'ajoute en déclarant une transformation dans `_TRANSFORMS`.
 
 ## Mémoire persistante
 

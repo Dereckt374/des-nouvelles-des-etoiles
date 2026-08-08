@@ -55,3 +55,17 @@ digest:
   custom_feeds:
     max_items: 15
     lookback_days: 7
+
+  # Section "Forums" (groupe forums de feeds.yaml) — rubriques choisies du
+  # forum de la conquête spatiale. Une entrée = un fil de discussion animé.
+  forums:
+    max_items: 20
+    lookback_days: 2
+
+  # Section "Comptes suivis" (groupe social de feeds.yaml) — comptes X des
+  # concurrents, relayés par Nitter. Dépendance fragile et hors conditions
+  # d'utilisation de X : si le relais tombe, la section disparaît simplement.
+  # Retweets et réponses sont écartés, seuls les messages propres sont gardés.
+  social:
+    max_items: 20
+    lookback_days: 2

@@ -28,6 +28,11 @@ log = logging.getLogger("main")
 CONFIG_PATH = Path(__file__).parent.parent / "config" / "settings.yaml"
 
 CUSTOM_FEEDS_TITLE = "Blogs & personnalités suivis"
+FORUMS_TITLE = "Forums"
+SOCIAL_TITLE = "Comptes suivis"
+
+# A tweet's "title" is its whole body; cap it so the headline stays a headline.
+SOCIAL_TITLE_LIMIT = 130
 
 
 def load_settings() -> dict:
@@ -95,31 +100,45 @@ def _launch_section(launch_cfg: dict):
     return build_section(launches, events, next_launch)
 
 
-def _custom_feeds_section(articles: list[dict]):
-    """Builds the custom-feeds section verbatim — no LLM involved.
+def _clip(text: str, limit: int) -> str:
+    """Trims to `limit` characters on a word boundary."""
+    text = " ".join((text or "").split())
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(",;:.") + "…"
 
-    These feeds are hand-picked voices: their own wording is the value, so
-    entries are shown as published rather than summarized.
+
+def _raw_section(key: str, title: str, articles: list[dict], title_limit: int = 0):
+    """Builds a section verbatim — no LLM involved.
+
+    Used by every hand-picked source: followed blogs, forum threads, competitor
+    accounts. Their own wording is the value, so entries are shown as published
+    rather than summarized.
+
+    `title_limit` caps the headline for sources whose "title" is really a body
+    of text — a tweet, typically. The full text then moves to the summary so
+    nothing is lost.
     """
     from models import Item, Section
 
-    items = [
-        Item(
-            title=a["title"],
-            url=a["url"],
-            source=a["feed_name"],
-            date=(a.get("published") or "")[:10],
-            summary=a["summary"][:400],
+    items = []
+    for a in articles:
+        headline, summary = a["title"], a["summary"][:400]
+        if title_limit and len(headline) > title_limit:
+            summary = headline if not summary else summary
+            headline = _clip(headline, title_limit)
+        items.append(
+            Item(
+                title=headline,
+                url=a["url"],
+                source=a["feed_name"],
+                date=(a.get("published") or "")[:10],
+                summary=summary,
+            )
         )
-        for a in articles
-    ]
+
     sources = sorted({a["feed_name"] for a in articles})
-    return Section(
-        key="custom_feeds",
-        title=CUSTOM_FEEDS_TITLE,
-        items=items,
-        subtitle=" · ".join(sources),
-    )
+    return Section(key=key, title=title, items=items, subtitle=" · ".join(sources))
 
 
 def run(dry_run: bool = False) -> None:
@@ -147,12 +166,26 @@ def run(dry_run: bool = False) -> None:
         group="custom_feeds",
     )
 
-    log.info(
-        "%d new articles, %d new custom-feed entries",
-        len(articles), len(custom_articles),
+    forums_cfg = digest_cfg.get("forums", {})
+    forum_posts = fetch_new_articles(
+        lookback_days=forums_cfg.get("lookback_days", 2),
+        max_total=forums_cfg.get("max_items", 20),
+        group="forums",
     )
 
-    if not articles and not custom_articles:
+    social_cfg = digest_cfg.get("social", {})
+    social_posts = fetch_new_articles(
+        lookback_days=social_cfg.get("lookback_days", 2),
+        max_total=social_cfg.get("max_items", 20),
+        group="social",
+    )
+
+    log.info(
+        "%d articles, %d custom-feed entries, %d forum threads, %d posts",
+        len(articles), len(custom_articles), len(forum_posts), len(social_posts),
+    )
+
+    if not any((articles, custom_articles, forum_posts, social_posts)):
         log.info("Nothing new — skipping digest")
         return
 
@@ -181,14 +214,20 @@ def run(dry_run: bool = False) -> None:
         if launch_section:
             sections.append(launch_section)
 
-        if custom_articles:
-            sections.append(_custom_feeds_section(custom_articles))
+        for key, title, entries, limit in (
+            ("custom_feeds", CUSTOM_FEEDS_TITLE, custom_articles, 0),
+            ("forums", FORUMS_TITLE, forum_posts, 0),
+            ("social", SOCIAL_TITLE, social_posts, SOCIAL_TITLE_LIMIT),
+        ):
+            if entries:
+                sections.append(_raw_section(key, title, entries, limit))
 
         digest = Digest(
             date_label=date_label,
             highlights=synthesis.highlights,
             sections=sections,
-            article_count=len(articles) + len(custom_articles),
+            article_count=len(articles) + len(custom_articles)
+            + len(forum_posts) + len(social_posts),
         )
         html_body = render_html(digest)
         plain_body = render_plain(digest)
@@ -227,7 +266,7 @@ def run(dry_run: bool = False) -> None:
     if synthesis.raw_error:
         log.warning("Digest sent in raw form — articles left unread for the next run")
     else:
-        mark_seen(articles + custom_articles)
+        mark_seen(articles + custom_articles + forum_posts + social_posts)
 
 
 if __name__ == "__main__":

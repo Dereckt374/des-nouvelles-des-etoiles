@@ -89,6 +89,43 @@ def _clean_summary(entry) -> str:
     return re.sub(r"\s+", " ", summary).strip()[:1000]
 
 
+# ---------------------------------------------------------------------------
+# Per-source post-processing
+#
+# Some feeds need source-specific handling that does not belong in the generic
+# RSS path. A feed declares `kind: <name>` in feeds.yaml and the matching
+# transform below is applied to each of its articles; returning None drops the
+# article. Dropped articles are never marked as seen, so they are re-evaluated
+# on the next run — cheap, and it means a change of rule takes effect at once.
+# ---------------------------------------------------------------------------
+
+# https://<instance>/<handle>/status/<id>#m  ->  https://x.com/<handle>/status/<id>
+_NITTER_STATUS = re.compile(r"^https?://[^/]+/([^/]+)/status/(\d+)")
+
+# Nitter prefixes retweets with "RT by @x:" and replies with "R to @x:".
+_NITTER_ECHO = ("RT by ", "R to ")
+
+
+def _nitter_article(article: dict) -> Optional[dict]:
+    """Keeps an account's own posts, and points links back at x.com.
+
+    Retweets and replies are dropped: what matters for competitive tracking is
+    what the company says itself. Links are rewritten because the relay is
+    expected to disappear one day, whereas x.com URLs stay valid — and the
+    tweet id embedded in them is stable either way.
+    """
+    if article["title"].startswith(_NITTER_ECHO):
+        return None
+
+    match = _NITTER_STATUS.match(article["url"] or "")
+    if match:
+        article["url"] = f"https://x.com/{match.group(1)}/status/{match.group(2)}"
+    return article
+
+
+_TRANSFORMS = {"nitter": _nitter_article}
+
+
 def load_feeds(group: str = "feeds") -> list[dict]:
     """Returns the feed definitions declared under `group` in feeds.yaml."""
     with open(CONFIG_PATH, encoding="utf-8") as f:
@@ -145,6 +182,7 @@ def fetch_new_articles(
     for feed_cfg in feeds:
         feed_url = feed_cfg["url"]
         feed_name = feed_cfg.get("name", feed_url)
+        transform = _TRANSFORMS.get(feed_cfg.get("kind") or "")
         try:
             parsed = feedparser.parse(feed_url, request_headers={"User-Agent": USER_AGENT})
             if parsed.bozo and not parsed.entries:
@@ -172,7 +210,7 @@ def fetch_new_articles(
                 url = entry.get("link", "").strip()
                 published = pub.isoformat() if pub else None
 
-                results.append({
+                article = {
                     "feed_name": feed_name,
                     "feed_url": feed_url,
                     "guid": guid,
@@ -180,7 +218,13 @@ def fetch_new_articles(
                     "url": url,
                     "published": published,
                     "summary": _clean_summary(entry),
-                })
+                }
+                if transform:
+                    article = transform(article)
+                    if article is None:
+                        continue
+
+                results.append(article)
 
         except Exception as e:
             log.error("Failed to fetch feed %s: %s", feed_name, e)

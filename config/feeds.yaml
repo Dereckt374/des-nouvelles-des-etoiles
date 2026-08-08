@@ -58,10 +58,6 @@ feeds:
     name: Space.com
     lang: en
 
-  - url: http://spacenews.com/feed/
-    name: SpaceNews
-    lang: en
-
   - url: https://spaceflightnow.com/feed/
     name: SpaceFlight Now
     lang: en
@@ -69,6 +65,32 @@ feeds:
   - url: https://www.esa.int/rssfeed/TopNews
     name: ESA — Top News
     lang: en
+
+  # --- Cœur new space & lanceurs ---------------------------------------
+  - url: https://europeanspaceflight.com/feed/
+    name: European Spaceflight
+    lang: en
+
+  - url: https://www.nasaspaceflight.com/feed/
+    name: NASASpaceflight
+    lang: en
+
+  - url: https://payloadspace.com/feed/
+    name: Payload Space
+    lang: en
+
+  - url: https://www.spaceintelreport.com/feed/
+    name: Space Intel Report
+    lang: en
+
+  # --- Francophone ------------------------------------------------------
+  - url: https://www.futura-sciences.com/rss/espace/actualites.xml
+    name: Futura — Espace
+    lang: fr
+
+  - url: https://www.cieletespace.fr/rss.xml
+    name: Ciel & Espace
+    lang: fr
 
 
 # ---------------------------------------------------------------------------
@@ -94,3 +116,152 @@ custom_feeds:
   # - url: https://planet4589.org/space/jsr/jsr.xml
   #   name: Jonathan McDowell — Jonathan's Space Report
   #   lang: en
+  #   NOTE : cette URL renvoie 404 (vérifié le 2026-08-08), à retrouver.
+
+
+# ---------------------------------------------------------------------------
+# forums — fils de discussion, section dédiée, sans LLM.
+#
+# Le forum de la conquête spatiale (Forumactif) expose un flux par rubrique,
+# via /feed/?f=<id>. On ne suit donc que les rubriques choisies, pas le flux
+# global du forum. Chaque entrée correspond à un *fil* (pas à un message), il
+# n'y a donc pas de répétition quand une discussion s'anime.
+#
+# Pour ajouter une rubrique : ouvrir la page de la rubrique, relever l'id
+# dans l'URL (/f49-spacex → 49) et l'ajouter ci-dessous.
+# ---------------------------------------------------------------------------
+forums:
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=10
+    name: Forum CS — Europe
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=18
+    name: Forum CS — Propulsions et lanceurs
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=4
+    name: Forum CS — Chine
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=11
+    name: Forum CS — Asie
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=49
+    name: Forum CS — SpaceX
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=59
+    name: Forum CS — Rocket Lab
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=61
+    name: Forum CS — Blue Origin
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=53
+    name: Forum CS — ULA
+    lang: fr
+
+  - url: https://www.forum-conquete-spatiale.fr/feed/?f=55
+    name: Forum CS — Autres sociétés privées US
+    lang: fr
+
+
+# ---------------------------------------------------------------------------
+# social — comptes X des concurrents suivis, section dédiée, sans LLM.
+#
+# X n'a plus d'API de lecture gratuite depuis 2023 ; ces flux passent par
+# Nitter, un relais tiers. Conséquences à connaître :
+#   - c'est une dépendance fragile, les instances publiques ferment souvent.
+#     Si celle-ci tombe, la section disparaît sans casser le digest.
+#   - `kind: nitter` déclenche un post-traitement (voir src/fetcher.py) :
+#     les retweets et les réponses sont écartés, et les liens sont réécrits
+#     vers x.com pour rester valides le jour où le relais change.
+#
+# Comptes vérifiés le 2026-08-08. Certains sont durablement inactifs mais
+# conservés : le filtre de fraîcheur les écarte tout seul, et ils reprendront
+# leur place si l'entreprise se remet à publier.
+# ---------------------------------------------------------------------------
+social:
+  - url: https://nitter.net/RocketLab/rss
+    name: Rocket Lab (@RocketLab)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/isaraerospace/rss
+    name: Isar Aerospace (@isaraerospace)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/rfa_space/rss
+    name: Rocket Factory Augsburg (@rfa_space)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/PLD_Space/rss
+    name: PLD Space (@PLD_Space)
+    kind: nitter
+    lang: es
+
+  - url: https://nitter.net/HyImpulseTech/rss
+    name: HyImpulse (@HyImpulseTech)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/avio_group/rss
+    name: Avio (@avio_group)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/orbexspace/rss
+    name: Orbex (@orbexspace)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/Skyrora_Ltd/rss
+    name: Skyrora (@Skyrora_Ltd)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/latitudespace/rss
+    name: Latitude (@latitudespace)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/Firefly_Space/rss
+    name: Firefly Aerospace (@Firefly_Space)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/stoke_space/rss
+    name: Stoke Space (@stoke_space)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/relativityspace/rss
+    name: Relativity Space (@relativityspace)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/GilmourSpace/rss
+    name: Gilmour Space (@GilmourSpace)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/SkyrootA/rss
+    name: Skyroot Aerospace (@SkyrootA)
+    kind: nitter
+    lang: en
+
+  - url: https://nitter.net/AgnikulCosmos/rss
+    name: Agnikul Cosmos (@AgnikulCosmos)
+    kind: nitter
+    lang: en
+
+  # MaiaSpace : @MaiaSpace_ remonte des messages de fin 2020, antérieurs à la
+  # création de l'entreprise — ce n'est pas leur compte. Handle à retrouver.
+  # - url: https://nitter.net/MaiaSpace_/rss
+  #   name: MaiaSpace (@MaiaSpace_)
+  #   kind: nitter
+  #   lang: fr

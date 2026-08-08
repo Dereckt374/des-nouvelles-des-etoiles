@@ -74,10 +74,12 @@ class Digest:
 # Gaps are intentional: upcoming features slot in without renumbering.
 SECTION_RANK = {
     "competition": 10,   # suivi de concurrence          (à venir)
-    "launches": 15,      # lancements du jour            (à venir)
+    "launches": 15,      # lancements du jour + événements
     "wikipedia": 20,     # wikipédia du jour             (à venir)
     "news": 30,          # suivi d'actualité             (sections LLM)
     "custom_feeds": 40,  # RSS customs (personnalités)
+    "forums": 42,        # fils de discussion suivis
+    "social": 44,        # comptes X des concurrents
     "history": 50,       # histoire, anecdotes, images   (à venir)
 }
 
