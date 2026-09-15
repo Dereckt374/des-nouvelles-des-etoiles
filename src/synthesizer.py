@@ -66,11 +66,16 @@ class Synthesis:
     `raw_error` is set instead of the other fields when the model answered
     but its output could not be parsed — the caller then ships the raw text
     rather than silently dropping the digest.
+
+    `api_error` is set when the Mistral API call itself failed (rate limit,
+    quota, network, ...) — the caller then ships a short notice instead of
+    leaving the reader without any mail at all.
     """
 
     highlights: list[str] = field(default_factory=list)
     sections: list[Section] = field(default_factory=list)
     raw_error: Optional[str] = None
+    api_error: Optional[str] = None
 
 
 def _format_articles(articles: list[dict]) -> str:
@@ -167,16 +172,20 @@ Génère le digest en respectant EXACTEMENT ce schéma JSON:
 
     log.info("Calling Mistral API (model: %s, articles: %d) ...", model, len(articles))
 
-    response = client.chat.complete(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=4000,
-    )
+    try:
+        response = client.chat.complete(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=4000,
+        )
+    except Exception as e:
+        log.error("Mistral API call failed: %s", e)
+        return Synthesis(api_error=str(e))
 
     raw = response.choices[0].message.content.strip()
     log.info("Mistral response received (%d chars)", len(raw))

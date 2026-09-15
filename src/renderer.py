@@ -302,6 +302,18 @@ def render_error(raw: str, date_label: str) -> str:
 </body></html>"""
 
 
+def render_api_error(error: str, date_label: str) -> str:
+    """Fallback email when the Mistral API call itself fails (rate limit, quota, network, ...)."""
+    return f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:620px;margin:40px auto;color:#333;">
+  <h2 style="color:#c0392b;">Digest du {date_label} — indisponible</h2>
+  <p>L'appel à l'API Mistral a échoué, aucun digest n'a pu être généré aujourd'hui.</p>
+  <pre style="background:#f8f8f8;padding:16px;border-radius:6px;
+              font-size:12px;overflow-x:auto;white-space:pre-wrap;">{escape(error)}</pre>
+</body></html>"""
+
+
 def render_empty() -> str:
     return """<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"></head>

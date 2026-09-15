@@ -158,7 +158,7 @@ def run(dry_run: bool = False) -> None:
 
     # --- 2. Synthesize the news sections ---
     from models import Digest
-    from renderer import render_error, render_html, render_plain
+    from renderer import render_api_error, render_error, render_html, render_plain
     from synthesizer import synthesize
 
     date_label = date.today().strftime("%A %d %B %Y")
@@ -171,7 +171,10 @@ def run(dry_run: bool = False) -> None:
     )
 
     # --- 3. Assemble ---
-    if synthesis.raw_error:
+    if synthesis.api_error:
+        html_body = render_api_error(synthesis.api_error, date_label)
+        plain_body = f"Digest du {date_label} — indisponible\n\n{synthesis.api_error}"
+    elif synthesis.raw_error:
         html_body = render_error(synthesis.raw_error, date_label)
         plain_body = synthesis.raw_error
     else:
@@ -221,10 +224,12 @@ def run(dry_run: bool = False) -> None:
         recipient=email_cfg["recipient"],
     )
 
-    # Only now are the articles considered delivered. On the raw_error path we
-    # deliberately leave them unmarked: the mail that went out is a parse dump,
-    # so tomorrow's run should get another shot at digesting them properly.
-    if synthesis.raw_error:
+    # Only now are the articles considered delivered. On the raw_error and
+    # api_error paths we deliberately leave them unmarked: no proper digest
+    # went out, so tomorrow's run should get another shot at them.
+    if synthesis.api_error:
+        log.warning("Digest unavailable (API error) — articles left unread for the next run")
+    elif synthesis.raw_error:
         log.warning("Digest sent in raw form — articles left unread for the next run")
     else:
         mark_seen(articles + custom_articles)
